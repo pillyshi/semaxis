@@ -1,8 +1,8 @@
-# Prism
+# SemAxis
 
 **Interpretable NLI-based text features for scikit-learn.**
 
-Prism turns raw text into a feature matrix by asking an LLM to generate natural-language hypotheses and scoring each text against them with an NLI model. Every feature is a human-readable sentence — no black-box embeddings.
+SemAxis turns raw text into a feature matrix by asking an LLM to generate natural-language hypotheses and scoring each text against them with an NLI model. Every feature is a human-readable sentence — no black-box embeddings.
 
 ```
 texts  ──►  LLM (hypothesis generation)  ──►  NLI scoring  ──►  X: (n_texts, n_features)
