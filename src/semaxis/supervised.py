@@ -5,8 +5,8 @@ from itertools import combinations
 from typing import Any, NamedTuple
 
 import numpy as np
-from sklearn.base import BaseEstimator, TransformerMixin  # type: ignore[import-untyped]
-from sklearn.preprocessing import LabelEncoder  # type: ignore[import-untyped]
+from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.preprocessing import LabelEncoder
 
 from .llm import BaseLLMClient, LLMClient
 from .nli import NLIModel

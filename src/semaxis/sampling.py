@@ -64,7 +64,7 @@ def sample_texts_kmeans(
     Returns:
         A list of up to n representative texts, one per cluster.
     """
-    from sklearn.cluster import KMeans  # type: ignore[import-untyped]
+    from sklearn.cluster import KMeans
 
     n = min(n, len(texts))
     if n == 0:
@@ -108,7 +108,7 @@ def sample_texts_votek(
     Returns:
         A list of up to n texts.
     """
-    from sklearn.metrics.pairwise import cosine_similarity  # type: ignore[import-untyped]
+    from sklearn.metrics.pairwise import cosine_similarity
 
     n = min(n, len(texts))
     if n == 0:
