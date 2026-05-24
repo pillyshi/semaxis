@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from semaxis import FeatureMeta, SupervisedTransformer
+from semaxis import SupervisedTransformer
 
 
 # ---------------------------------------------------------------------------
@@ -220,3 +220,65 @@ def test_transform_uses_fitted_features():
 
     t.transform(["x", "y"])
     assert nli.score.call_count == 3
+
+
+# ---------------------------------------------------------------------------
+# sample_method parameter
+# ---------------------------------------------------------------------------
+
+def test_sample_method_invalid_raises():
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", sample_method="bad")
+    with pytest.raises(ValueError, match="sample_method"):
+        _fit_binary(t, _make_llm(2), _make_nli())
+
+
+def test_sample_method_random_default():
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
+    assert t.sample_method == "random"
+
+
+def _fit_binary_with_method(method: str) -> SupervisedTransformer:
+    t = SupervisedTransformer(
+        llm=MagicMock(), nli_model="m", n_features=2, sample_method=method
+    )
+    texts = ["text A1", "text A2", "text B1", "text B2"]
+    labels = [0, 0, 1, 1]
+    nli = _make_nli()
+    llm = _make_llm(2)
+    fake_embeddings = np.zeros((2, 4))
+    fake_model = MagicMock()
+    fake_model.encode.return_value = fake_embeddings
+    with patch("semaxis.supervised.NLIModel", return_value=nli), \
+         patch("sentence_transformers.SentenceTransformer", return_value=fake_model):
+        t.llm = llm
+        t.fit(texts, labels)
+    return t
+
+
+def test_sample_method_kmeans_fits_without_error():
+    t = _fit_binary_with_method("kmeans")
+    assert t.features_ == ["hyp 0", "hyp 1"]
+
+
+def test_sample_method_votek_fits_without_error():
+    t = _fit_binary_with_method("votek")
+    assert t.features_ == ["hyp 0", "hyp 1"]
+
+
+def test_sample_method_kmeans_calls_sentence_transformer():
+    texts = ["text A1", "text A2", "text B1", "text B2"]
+    labels = [0, 0, 1, 1]
+    nli = _make_nli()
+    llm = _make_llm(2)
+    fake_embeddings = np.zeros((2, 4))
+    fake_model = MagicMock()
+    fake_model.encode.return_value = fake_embeddings
+
+    t = SupervisedTransformer(
+        llm=MagicMock(), nli_model="m", n_features=2, sample_method="kmeans"
+    )
+    with patch("semaxis.supervised.NLIModel", return_value=nli), \
+         patch("sentence_transformers.SentenceTransformer", return_value=fake_model) as MockST:
+        t.llm = llm
+        t.fit(texts, labels)
+        assert MockST.called

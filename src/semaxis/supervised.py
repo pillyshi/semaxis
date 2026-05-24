@@ -10,8 +10,39 @@ from sklearn.preprocessing import LabelEncoder
 
 from .llm import BaseLLMClient, LLMClient
 from .nli import NLIModel
-from .sampling import sample_texts_within_budget
+from .sampling import (
+    _estimate_n,
+    _trim_to_budget,
+    sample_texts_kmeans,
+    sample_texts_votek,
+    sample_texts_within_budget,
+)
 from .prompts import discriminative_features as prompts
+
+_SAMPLE_METHODS = ("random", "kmeans", "votek")
+
+
+def _sample_group(
+    texts: list[str],
+    budget: int,
+    tokenizer_fn: Any,
+    method: str,
+    embedding_model: str,
+    rng: random.Random,
+) -> list[str]:
+    if method == "random":
+        return sample_texts_within_budget(texts, budget, tokenizer_fn, rng)
+
+    from sentence_transformers import SentenceTransformer
+    embeddings = SentenceTransformer(embedding_model).encode(
+        texts, show_progress_bar=False, convert_to_numpy=True
+    )
+    n = _estimate_n(texts, budget, tokenizer_fn)
+    if method == "kmeans":
+        sampled = sample_texts_kmeans(texts, n, embeddings, rng)
+    else:
+        sampled = sample_texts_votek(texts, n, embeddings, rng=rng)
+    return _trim_to_budget(sampled, budget, tokenizer_fn)
 
 _PROMPT_OVERHEAD = 500
 
@@ -59,6 +90,8 @@ class SupervisedTransformer(BaseEstimator, TransformerMixin):
         context_limit: int = 100_000,
         language: str | None = None,
         seed: int | None = None,
+        sample_method: str = "random",
+        embedding_model: str = "paraphrase-albert-small-v2",
     ) -> None:
         self.llm = llm
         self.nli_model = nli_model
@@ -67,6 +100,8 @@ class SupervisedTransformer(BaseEstimator, TransformerMixin):
         self.context_limit = context_limit
         self.language = language
         self.seed = seed
+        self.sample_method = sample_method
+        self.embedding_model = embedding_model
 
     def fit(self, texts: list[str], y: Any) -> SupervisedTransformer:
         """Generate discriminative hypotheses from training texts and labels.
@@ -80,6 +115,8 @@ class SupervisedTransformer(BaseEstimator, TransformerMixin):
         """
         if self.strategy not in ("ovr", "ovo"):
             raise ValueError(f"strategy must be 'ovr' or 'ovo', got {self.strategy!r}")
+        if self.sample_method not in _SAMPLE_METHODS:
+            raise ValueError(f"sample_method must be one of {_SAMPLE_METHODS}, got {self.sample_method!r}")
 
         _llm = LLMClient(self.llm) if isinstance(self.llm, str) else self.llm
         _rng = random.Random(self.seed)
@@ -112,11 +149,13 @@ class SupervisedTransformer(BaseEstimator, TransformerMixin):
                 neg_texts = [t for t, yi in zip(texts, y_enc) if yi == neg_idx]
                 neg_label = self.classes_[neg_idx]
 
-            pos_sampled = sample_texts_within_budget(
-                pos_texts, budget // 2, _llm.count_tokens, rng=_rng
+            pos_sampled = _sample_group(
+                pos_texts, budget // 2, _llm.count_tokens,
+                self.sample_method, self.embedding_model, _rng,
             )
-            neg_sampled = sample_texts_within_budget(
-                neg_texts, budget // 2, _llm.count_tokens, rng=_rng
+            neg_sampled = _sample_group(
+                neg_texts, budget // 2, _llm.count_tokens,
+                self.sample_method, self.embedding_model, _rng,
             )
 
             messages = [
