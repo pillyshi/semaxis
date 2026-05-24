@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from prism import UnsupervisedTransformer
+from semaxis import UnsupervisedTransformer
 
 
 # ---------------------------------------------------------------------------
@@ -34,7 +34,7 @@ def _fit(
 ) -> UnsupervisedTransformer:
     if texts is None:
         texts = ["text 1", "text 2", "text 3"]
-    with patch("prism.unsupervised.NLIModel", return_value=nli):
+    with patch("semaxis.unsupervised.NLIModel", return_value=nli):
         transformer.llm = llm
         return transformer.fit(texts)
 
@@ -66,7 +66,7 @@ def test_fit_y_is_optional():
     t = UnsupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
     llm = _make_llm(2)
     nli = _make_nli()
-    with patch("prism.unsupervised.NLIModel", return_value=nli):
+    with patch("semaxis.unsupervised.NLIModel", return_value=nli):
         t.llm = llm
         t.fit(["a", "b", "c"])  # no y
 
@@ -76,7 +76,7 @@ def test_fit_y_ignored():
     t = UnsupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
     llm = _make_llm(2)
     nli = _make_nli()
-    with patch("prism.unsupervised.NLIModel", return_value=nli):
+    with patch("semaxis.unsupervised.NLIModel", return_value=nli):
         t.llm = llm
         t.fit(["a", "b", "c"], y=[0, 1, 0])
     assert t.features_ == ["hyp 0", "hyp 1"]

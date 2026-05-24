@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from prism import FeatureMeta, SupervisedTransformer
+from semaxis import FeatureMeta, SupervisedTransformer
 
 
 # ---------------------------------------------------------------------------
@@ -33,7 +33,7 @@ def _fit_binary(
 ) -> SupervisedTransformer:
     texts = ["text A1", "text A2", "text B1", "text B2"]
     labels = [0, 0, 1, 1]
-    with patch("prism.supervised.NLIModel", return_value=nli):
+    with patch("semaxis.supervised.NLIModel", return_value=nli):
         transformer.llm = llm
         return transformer.fit(texts, labels)
 
@@ -80,7 +80,7 @@ def test_fit_binary_string_labels():
     nli = _make_nli()
     texts = ["text A", "text B", "text C", "text D"]
     labels = ["cat", "cat", "dog", "dog"]
-    with patch("prism.supervised.NLIModel", return_value=nli):
+    with patch("semaxis.supervised.NLIModel", return_value=nli):
         t.llm = llm
         t.fit(texts, labels)
     np.testing.assert_array_equal(t.classes_, ["cat", "dog"])
@@ -99,7 +99,7 @@ def test_fit_binary_ignores_strategy():
     t_ovr = SupervisedTransformer(llm=llm, nli_model="m", n_features=2, strategy="ovr")
     t_ovo = SupervisedTransformer(llm=llm, nli_model="m", n_features=2, strategy="ovo")
 
-    with patch("prism.supervised.NLIModel", return_value=nli):
+    with patch("semaxis.supervised.NLIModel", return_value=nli):
         t_ovr.fit(texts, labels)
         t_ovo.fit(texts, labels)
 
@@ -118,7 +118,7 @@ def test_fit_ovr_feature_count():
     nli = _make_nli()
     texts = ["a", "b", "c", "d", "e", "f"]
     labels = [0, 0, 1, 1, 2, 2]
-    with patch("prism.supervised.NLIModel", return_value=nli):
+    with patch("semaxis.supervised.NLIModel", return_value=nli):
         t.llm = llm
         t.fit(texts, labels)
     assert len(t.features_) == 3 * 2  # 3 classes × 2 features
@@ -130,7 +130,7 @@ def test_fit_ovr_meta_has_rest():
     nli = _make_nli()
     texts = ["a", "b", "c", "d", "e", "f"]
     labels = [0, 0, 1, 1, 2, 2]
-    with patch("prism.supervised.NLIModel", return_value=nli):
+    with patch("semaxis.supervised.NLIModel", return_value=nli):
         t.llm = llm
         t.fit(texts, labels)
     assert all(meta.negative == "rest" for meta in t.feature_meta_)
@@ -142,7 +142,7 @@ def test_fit_ovr_meta_covers_all_classes():
     nli = _make_nli()
     texts = ["a", "b", "c", "d", "e", "f"]
     labels = [0, 0, 1, 1, 2, 2]
-    with patch("prism.supervised.NLIModel", return_value=nli):
+    with patch("semaxis.supervised.NLIModel", return_value=nli):
         t.llm = llm
         t.fit(texts, labels)
     positives = {meta.positive for meta in t.feature_meta_}
@@ -160,7 +160,7 @@ def test_fit_ovo_feature_count():
     nli = _make_nli()
     texts = ["a", "b", "c", "d", "e", "f"]
     labels = [0, 0, 1, 1, 2, 2]
-    with patch("prism.supervised.NLIModel", return_value=nli):
+    with patch("semaxis.supervised.NLIModel", return_value=nli):
         t.llm = llm
         t.fit(texts, labels)
     assert len(t.features_) == 3 * 2  # C(3,2)=3 pairs × 2 features
@@ -172,7 +172,7 @@ def test_fit_ovo_meta_pairs():
     nli = _make_nli()
     texts = ["a", "b", "c", "d", "e", "f"]
     labels = [0, 0, 1, 1, 2, 2]
-    with patch("prism.supervised.NLIModel", return_value=nli):
+    with patch("semaxis.supervised.NLIModel", return_value=nli):
         t.llm = llm
         t.fit(texts, labels)
     pairs = {(meta.positive, meta.negative) for meta in t.feature_meta_}

@@ -15,7 +15,7 @@ Both transformers are sklearn-compatible: they work inside `Pipeline` and are sa
 ## Installation
 
 ```bash
-pip install prism-text
+pip install semaxis
 ```
 
 ---
@@ -28,7 +28,7 @@ pip install prism-text
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score
-from prism import UnsupervisedTransformer
+from semaxis import UnsupervisedTransformer
 
 pipe = Pipeline([
     ("vect", UnsupervisedTransformer(
@@ -51,7 +51,7 @@ cross_val_score(pipe, texts, labels, cv=5)
 ### Binary
 
 ```python
-from prism import SupervisedTransformer
+from semaxis import SupervisedTransformer
 
 pipe = Pipeline([
     ("vect", SupervisedTransformer(
@@ -123,8 +123,8 @@ Any [LangChain](https://python.langchain.com/)-compatible model works via `LangC
 
 ```python
 from langchain_ollama import ChatOllama
-from prism import UnsupervisedTransformer
-from prism import LangChainLLMClient
+from semaxis import UnsupervisedTransformer
+from semaxis import LangChainLLMClient
 
 llm = LangChainLLMClient(ChatOllama(model="llama3.2", format="json"))
 
@@ -144,8 +144,8 @@ vect = UnsupervisedTransformer(llm=llm, nli_model="cross-encoder/nli-deberta-v3-
 ## Citation
 
 ```bibtex
-@software{prism2026,
-  title  = {Prism: Interpretable NLI-based text features for scikit-learn},
+@software{semaxis2026,
+  title  = {SemAxis: Interpretable NLI-based text features for scikit-learn},
   year   = {2026},
 }
 ```

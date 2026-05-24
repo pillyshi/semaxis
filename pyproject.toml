@@ -1,9 +1,9 @@
 [tool.poetry]
-name = "prism-text"
+name = "semaxis"
 version = "0.15.0"
-description = "Language-Defined Feature Space for Interpretable Text Analysis"
+description = "Interpretable NLI-based text features for scikit-learn"
 authors = []
-packages = [{include = "prism", from = "src"}]
+packages = [{include = "semaxis", from = "src"}]
 
 [tool.poetry.dependencies]
 python = ">=3.11"
