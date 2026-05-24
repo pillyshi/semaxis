@@ -41,7 +41,7 @@ class LLMClient:
         response = self._client.chat.completions.create(
             model=self.model,
             messages=messages,  # type: ignore[arg-type]
-            response_format={"type": "json_object"},
+            response_format={"type": "json_object"},  # type: ignore[call-overload]
         )
         content = response.choices[0].message.content or ""
         return json.loads(content)
@@ -69,7 +69,7 @@ class LangChainLLMClient:
         """Invoke the LangChain model and return the response string."""
         from langchain_core.messages import HumanMessage, SystemMessage
 
-        lc_messages = []
+        lc_messages: list[SystemMessage | HumanMessage] = []
         for m in messages:
             role = m.get("role", "user")
             content = m.get("content", "")
