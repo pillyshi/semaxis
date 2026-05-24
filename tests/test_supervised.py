@@ -1,0 +1,222 @@
+"""Unit tests for SupervisedTransformer."""
+from unittest.mock import MagicMock, patch
+
+import numpy as np
+import pytest
+
+from semaxis import FeatureMeta, SupervisedTransformer
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _make_llm(n_features: int = 2) -> MagicMock:
+    llm = MagicMock()
+    llm.count_tokens.return_value = 1
+    llm.complete_json.return_value = {
+        "features": [{"hypothesis": f"hyp {i}"} for i in range(n_features)]
+    }
+    return llm
+
+
+def _make_nli(score_value: float = 0.8) -> MagicMock:
+    nli = MagicMock()
+    nli.score.side_effect = lambda texts, hypotheses: np.full(len(texts), score_value)
+    return nli
+
+
+def _fit_binary(
+    transformer: SupervisedTransformer,
+    llm: MagicMock,
+    nli: MagicMock,
+) -> SupervisedTransformer:
+    texts = ["text A1", "text A2", "text B1", "text B2"]
+    labels = [0, 0, 1, 1]
+    with patch("semaxis.supervised.NLIModel", return_value=nli):
+        transformer.llm = llm
+        return transformer.fit(texts, labels)
+
+
+# ---------------------------------------------------------------------------
+# fit — binary
+# ---------------------------------------------------------------------------
+
+def test_fit_binary_returns_self():
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
+    result = _fit_binary(t, _make_llm(2), _make_nli())
+    assert result is t
+
+
+def test_fit_binary_sets_classes():
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
+    _fit_binary(t, _make_llm(2), _make_nli())
+    np.testing.assert_array_equal(t.classes_, [0, 1])
+
+
+def test_fit_binary_sets_features():
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
+    _fit_binary(t, _make_llm(2), _make_nli())
+    assert t.features_ == ["hyp 0", "hyp 1"]
+
+
+def test_fit_binary_sets_feature_meta_parallel():
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
+    _fit_binary(t, _make_llm(2), _make_nli())
+    assert len(t.feature_meta_) == len(t.features_)
+
+
+def test_fit_binary_meta_labels():
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
+    _fit_binary(t, _make_llm(2), _make_nli())
+    for meta in t.feature_meta_:
+        assert meta.positive == 0
+        assert meta.negative == 1
+
+
+def test_fit_binary_string_labels():
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
+    llm = _make_llm(2)
+    nli = _make_nli()
+    texts = ["text A", "text B", "text C", "text D"]
+    labels = ["cat", "cat", "dog", "dog"]
+    with patch("semaxis.supervised.NLIModel", return_value=nli):
+        t.llm = llm
+        t.fit(texts, labels)
+    np.testing.assert_array_equal(t.classes_, ["cat", "dog"])
+    for meta in t.feature_meta_:
+        assert meta.positive == "cat"
+        assert meta.negative == "dog"
+
+
+def test_fit_binary_ignores_strategy():
+    """Binary: ovr and ovo produce the same single pair."""
+    texts = ["a", "b", "c", "d"]
+    labels = [0, 0, 1, 1]
+    llm = _make_llm(2)
+    nli = _make_nli()
+
+    t_ovr = SupervisedTransformer(llm=llm, nli_model="m", n_features=2, strategy="ovr")
+    t_ovo = SupervisedTransformer(llm=llm, nli_model="m", n_features=2, strategy="ovo")
+
+    with patch("semaxis.supervised.NLIModel", return_value=nli):
+        t_ovr.fit(texts, labels)
+        t_ovo.fit(texts, labels)
+
+    assert len(t_ovr.features_) == len(t_ovo.features_)
+    assert t_ovr.feature_meta_ == t_ovo.feature_meta_
+
+
+# ---------------------------------------------------------------------------
+# fit — multi-class OvR
+# ---------------------------------------------------------------------------
+
+def test_fit_ovr_feature_count():
+    """OvR: n_classes pairs × n_features hypotheses."""
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2, strategy="ovr")
+    llm = _make_llm(2)
+    nli = _make_nli()
+    texts = ["a", "b", "c", "d", "e", "f"]
+    labels = [0, 0, 1, 1, 2, 2]
+    with patch("semaxis.supervised.NLIModel", return_value=nli):
+        t.llm = llm
+        t.fit(texts, labels)
+    assert len(t.features_) == 3 * 2  # 3 classes × 2 features
+
+
+def test_fit_ovr_meta_has_rest():
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2, strategy="ovr")
+    llm = _make_llm(2)
+    nli = _make_nli()
+    texts = ["a", "b", "c", "d", "e", "f"]
+    labels = [0, 0, 1, 1, 2, 2]
+    with patch("semaxis.supervised.NLIModel", return_value=nli):
+        t.llm = llm
+        t.fit(texts, labels)
+    assert all(meta.negative == "rest" for meta in t.feature_meta_)
+
+
+def test_fit_ovr_meta_covers_all_classes():
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2, strategy="ovr")
+    llm = _make_llm(2)
+    nli = _make_nli()
+    texts = ["a", "b", "c", "d", "e", "f"]
+    labels = [0, 0, 1, 1, 2, 2]
+    with patch("semaxis.supervised.NLIModel", return_value=nli):
+        t.llm = llm
+        t.fit(texts, labels)
+    positives = {meta.positive for meta in t.feature_meta_}
+    assert positives == {0, 1, 2}
+
+
+# ---------------------------------------------------------------------------
+# fit — multi-class OvO
+# ---------------------------------------------------------------------------
+
+def test_fit_ovo_feature_count():
+    """OvO: C(n_classes, 2) pairs × n_features hypotheses."""
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2, strategy="ovo")
+    llm = _make_llm(2)
+    nli = _make_nli()
+    texts = ["a", "b", "c", "d", "e", "f"]
+    labels = [0, 0, 1, 1, 2, 2]
+    with patch("semaxis.supervised.NLIModel", return_value=nli):
+        t.llm = llm
+        t.fit(texts, labels)
+    assert len(t.features_) == 3 * 2  # C(3,2)=3 pairs × 2 features
+
+
+def test_fit_ovo_meta_pairs():
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2, strategy="ovo")
+    llm = _make_llm(2)
+    nli = _make_nli()
+    texts = ["a", "b", "c", "d", "e", "f"]
+    labels = [0, 0, 1, 1, 2, 2]
+    with patch("semaxis.supervised.NLIModel", return_value=nli):
+        t.llm = llm
+        t.fit(texts, labels)
+    pairs = {(meta.positive, meta.negative) for meta in t.feature_meta_}
+    assert pairs == {(0, 1), (0, 2), (1, 2)}
+
+
+# ---------------------------------------------------------------------------
+# fit — validation
+# ---------------------------------------------------------------------------
+
+def test_fit_invalid_strategy_raises():
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", strategy="invalid")
+    with pytest.raises(ValueError, match="strategy"):
+        t.fit(["a", "b"], [0, 1])
+
+
+# ---------------------------------------------------------------------------
+# transform
+# ---------------------------------------------------------------------------
+
+def test_transform_shape():
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=3)
+    nli = _make_nli(0.5)
+    _fit_binary(t, _make_llm(3), nli)
+
+    test_texts = ["x", "y", "z", "w"]
+    X = t.transform(test_texts)
+    assert X.shape == (4, 3)
+
+
+def test_transform_values():
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
+    nli = _make_nli(0.7)
+    _fit_binary(t, _make_llm(2), nli)
+
+    X = t.transform(["x", "y"])
+    np.testing.assert_allclose(X, 0.7)
+
+
+def test_transform_uses_fitted_features():
+    """NLI is called once per hypothesis in features_."""
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=3)
+    nli = _make_nli()
+    _fit_binary(t, _make_llm(3), nli)
+
+    t.transform(["x", "y"])
+    assert nli.score.call_count == 3
