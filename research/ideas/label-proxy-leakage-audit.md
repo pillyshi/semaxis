@@ -2,7 +2,8 @@
 
 ## Status
 
-Recommended for GitHub issue after this research workflow is reviewed.
+Promoted to GitHub issue:
+[#20: audit label-proxy leakage in supervised hypotheses](https://github.com/pillyshi/semaxis/issues/20).
 
 ## Terminology
 

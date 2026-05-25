@@ -2,7 +2,8 @@
 
 ## Status
 
-Recommended for GitHub issue after this research workflow is reviewed.
+Promoted to GitHub issue:
+[#19: prune redundant hypotheses before NLI scoring](https://github.com/pillyshi/semaxis/issues/19).
 
 ## Motivation
 
@@ -11,6 +12,13 @@ hypotheses returned by the generator and score every retained hypothesis with
 NLI. Semantically repeated hypotheses therefore create redundant output
 columns, make coefficient-based explanations noisier, and increase NLI
 inference cost.
+
+Downstream feature selection can reduce redundant columns before the final
+predictor is fitted, but it operates after the feature matrix has been
+computed. It therefore does not avoid the NLI scoring cost of redundant
+hypotheses. This candidate focuses on pruning between generation and NLI
+measurement; it complements rather than replaces downstream feature
+selection.
 
 FELIX addresses a closely related problem by embedding generated feature
 schemas, clustering semantically related candidates, and retaining a
@@ -40,6 +48,8 @@ representative feature from each cluster.
 ## Proposed Scope
 
 - Add an optional post-generation pruning strategy for `features_`.
+- Apply pruning before NLI measurement so redundant hypotheses do not incur
+  avoidable scoring work.
 - Begin with deterministic embedding-similarity deduplication using a
   configurable similarity threshold; avoid requiring HDBSCAN in the first
   implementation.
@@ -53,6 +63,8 @@ representative feature from each cluster.
 
 - Users can enable semantic hypothesis deduplication through transformer
   configuration without changing existing default behavior.
+- Enabled deduplication reduces the number of hypotheses submitted to NLI
+  scoring when near-duplicates are generated.
 - Duplicate or near-duplicate hypotheses are removed deterministically under a
   mocked embedding matrix.
 - Supervised feature metadata remains parallel to the retained feature list.
@@ -67,6 +79,7 @@ representative feature from each cluster.
 - Implementing HDBSCAN or full feature clustering before a simpler threshold
   method is evaluated.
 - Running a multi-dataset benchmark.
+- Replacing downstream predictive feature selection.
 
 ## Open Design Choice
 
