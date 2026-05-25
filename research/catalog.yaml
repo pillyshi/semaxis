@@ -47,8 +47,9 @@ papers:
     relevance: direct_competitor
     priority: must_read
     rationale: "Automatically discovers and measures text concepts before linear prediction."
-    note_status: pending
-    pdf_status: missing
+    note_status: drafted
+    pdf_status: cached
+    local_pdf: "pdfs/tbm-2023.pdf"
 
   - key: chill-2023
     title: "CHiLL: Zero-shot Custom Interpretable Feature Extraction from Clinical Notes with Large Language Models"

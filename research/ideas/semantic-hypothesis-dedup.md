@@ -2,7 +2,7 @@
 
 ## Status
 
-Candidate for GitHub issue after scope review.
+Recommended for GitHub issue after this research workflow is reviewed.
 
 ## Motivation
 
@@ -23,6 +23,12 @@ representative feature from each cluster.
   embedding, HDBSCAN clustering, and representative selection.
 - [`../notes/felix-2024.md`](../notes/felix-2024.md) records the direct
   comparison with SemAxis.
+- Ludan et al. 2023. *Interpretable-by-Design Text Understanding with
+  Iteratively Generated Concept Bottleneck*. Its human evaluation reports
+  redundancy as the most frequent generated-concept issue (`25%` on average)
+  and calls for filtering redundant and leaky concepts.
+- [`../notes/tbm-2023.md`](../notes/tbm-2023.md) records TBM's generation and
+  evaluation findings relevant to this candidate.
 - Current implementation appends generated hypotheses without a consolidation
   step in `src/semaxis/supervised.py` and `src/semaxis/unsupervised.py`.
 
