@@ -122,3 +122,61 @@ def test_transform_different_texts_from_fit():
     _fit(t, _make_llm(2), _make_nli(0.5))
     X = t.transform(["unseen text A", "unseen text B", "unseen text C"])
     assert X.shape == (3, 2)
+
+
+# ---------------------------------------------------------------------------
+# sample_method parameter
+# ---------------------------------------------------------------------------
+
+def test_sample_method_invalid_raises():
+    t = UnsupervisedTransformer(llm=MagicMock(), nli_model="m", sample_method="bad")
+    with pytest.raises(ValueError, match="sample_method"):
+        _fit(t, _make_llm(2), _make_nli())
+
+
+def test_sample_method_random_default():
+    t = UnsupervisedTransformer(llm=MagicMock(), nli_model="m")
+    assert t.sample_method == "random"
+
+
+def _fit_with_method(method: str) -> UnsupervisedTransformer:
+    t = UnsupervisedTransformer(
+        llm=MagicMock(), nli_model="m", n_features=2, sample_method=method
+    )
+    llm = _make_llm(2)
+    nli = _make_nli()
+    fake_embeddings = np.zeros((3, 4))
+    fake_model = MagicMock()
+    fake_model.encode.return_value = fake_embeddings
+    with patch("semaxis.unsupervised.NLIModel", return_value=nli), \
+         patch("sentence_transformers.SentenceTransformer", return_value=fake_model):
+        t.llm = llm
+        t.fit(["text 1", "text 2", "text 3"])
+    return t
+
+
+def test_sample_method_kmeans_fits_without_error():
+    t = _fit_with_method("kmeans")
+    assert t.features_ == ["hyp 0", "hyp 1"]
+
+
+def test_sample_method_votek_fits_without_error():
+    t = _fit_with_method("votek")
+    assert t.features_ == ["hyp 0", "hyp 1"]
+
+
+def test_sample_method_kmeans_calls_sentence_transformer():
+    llm = _make_llm(2)
+    nli = _make_nli()
+    fake_embeddings = np.zeros((3, 4))
+    fake_model = MagicMock()
+    fake_model.encode.return_value = fake_embeddings
+
+    t = UnsupervisedTransformer(
+        llm=MagicMock(), nli_model="m", n_features=2, sample_method="kmeans"
+    )
+    with patch("semaxis.unsupervised.NLIModel", return_value=nli), \
+         patch("sentence_transformers.SentenceTransformer", return_value=fake_model) as MockST:
+        t.llm = llm
+        t.fit(["text 1", "text 2", "text 3"])
+        assert MockST.called
