@@ -54,6 +54,13 @@ more expensive feature-generation process.
   interpretability.
 - [`../notes/chill-2023.md`](../notes/chill-2023.md) records CHiLL's
   expert-specified feature setting and interpretability warning.
+- Balek et al. 2025. *LLM-based feature generation from text for interpretable
+  machine learning*. Its automated feature-discovery prompt permits features
+  derived from target-matching values; in the Food Hazard SHAP example the top
+  feature is `hazard_type_biological`, directly approximating the evaluated
+  hazard-category target.
+- [`../notes/balek-2025.md`](../notes/balek-2025.md) records this automated
+  discovery workflow and its similarity to supervised SemAxis generation.
 - Current `src/semaxis/supervised.py` passes class labels to generation and
   stores all returned hypotheses without a leakage audit.
 
@@ -78,6 +85,8 @@ more expensive feature-generation process.
 - Predictive metric when feature generation receives anonymized labels.
 - Overlap between generated hypotheses and direct class-label hypotheses.
 - Variation of the above across folds or seeds.
+- Sensitivity of proxy rate to `sample_method` when more than one selection
+  strategy is included in the audit.
 
 ## Acceptance Criteria
 

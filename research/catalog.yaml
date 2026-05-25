@@ -95,8 +95,10 @@ papers:
     relevance: direct_competitor
     priority: must_read
     rationale: "Generates interpretable text features for classification and rule discovery."
-    note_status: pending
-    pdf_status: missing
+    note_status: drafted
+    pdf_status: cached
+    cached_version: preprint
+    local_pdf: "pdfs/balek-2024-preprint.pdf"
 
   - key: logipart-2025
     title: "LogiPart: Local Large Language Models for Data Exploration at Scale with Logical Partitioning"
