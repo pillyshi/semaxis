@@ -114,7 +114,7 @@ papers:
     relevance: direct_competitor
     priority: must_read
     rationale: "Combines natural-language logical partitions with NLI-based assignment."
-    note_status: pending
+    note_status: drafted
     pdf_status: cached
     local_pdf: "pdfs/2509.22211v3.pdf"
 

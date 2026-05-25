@@ -29,6 +29,11 @@ representative feature from each cluster.
   and calls for filtering redundant and leaky concepts.
 - [`../notes/tbm-2023.md`](../notes/tbm-2023.md) records TBM's generation and
   evaluation findings relevant to this candidate.
+- Tavares. 2025. *LogiPart*. Its hierarchy builder blocklists hypotheses
+  already used or rejected at higher tree levels to avoid repeated semantic
+  splits, providing a nearby NLI-based precedent for redundancy control.
+- [`../notes/logipart-2025.md`](../notes/logipart-2025.md) records the
+  hypothesis-generation and NLI-assignment comparison with SemAxis.
 - Current implementation appends generated hypotheses without a consolidation
   step in `src/semaxis/supervised.py` and `src/semaxis/unsupervised.py`.
 
