@@ -68,8 +68,9 @@ papers:
     relevance: direct_competitor
     priority: must_read
     rationale: "Extracts natural-language high-level features and uses them in a linear model."
-    note_status: pending
-    pdf_status: missing
+    note_status: drafted
+    pdf_status: cached
+    local_pdf: "pdfs/chill-2023.pdf"
 
   - key: balek-2025
     title: "LLM-based feature generation from text for interpretable machine learning"

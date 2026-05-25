@@ -48,6 +48,12 @@ more expensive feature-generation process.
   models include label-leaking concepts, motivating an explicit performance
   ablation rather than assuming leakage is harmless.
 - [`../notes/tbm-2023.md`](../notes/tbm-2023.md) summarizes these findings.
+- McInerney et al. 2023. *CHiLL*. Its limitations discuss a mortality query
+  equivalent to asking whether the patient is at risk of death: it can be
+  predictive while paraphrasing the downstream task and adding little
+  interpretability.
+- [`../notes/chill-2023.md`](../notes/chill-2023.md) records CHiLL's
+  expert-specified feature setting and interpretability warning.
 - Current `src/semaxis/supervised.py` passes class labels to generation and
   stores all returned hypotheses without a leakage audit.
 
