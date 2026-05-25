@@ -1,0 +1,156 @@
+catalog_version: 1
+project: semaxis
+verified_on: "2026-05-26"
+verification:
+  provider: OpenAlex
+  client: pyalex
+  command_environment: "poetry run"
+source_reports:
+  - reports/deep-research-report.md
+
+papers:
+  - key: felix-2024
+    title: "FELIX: Automatic and Interpretable Feature Engineering Using LLMs"
+    authors:
+      - "Simon Malberg"
+      - "E. Mosca"
+      - "Georg Groh"
+    year: 2024
+    publication_type: book-chapter
+    venue: "Lecture Notes in Computer Science"
+    identifiers:
+      doi: "10.1007/978-3-031-70359-1_14"
+      openalex: "W4402011475"
+    relevance: direct_competitor
+    priority: must_read
+    rationale: "LLM-generated interpretable features are assigned and passed to a downstream classifier."
+    note_status: drafted
+    pdf_status: cached
+    local_pdf: "pdfs/felix-2024.pdf"
+
+  - key: tbm-2023
+    title: "Interpretable-by-Design Text Understanding with Iteratively Generated Concept Bottleneck"
+    authors:
+      - "Josh Magnus Ludan"
+      - "Qing Lyu"
+      - "Yue Yang"
+      - "Liam Dugan"
+      - "Mark Yatskar"
+      - "Chris Callison-Burch"
+    year: 2023
+    publication_type: preprint
+    venue: arXiv
+    identifiers:
+      doi: "10.48550/arXiv.2310.19660"
+      arxiv: "2310.19660"
+      openalex: "W4388110129"
+    relevance: direct_competitor
+    priority: must_read
+    rationale: "Automatically discovers and measures text concepts before linear prediction."
+    note_status: pending
+    pdf_status: missing
+
+  - key: chill-2023
+    title: "CHiLL: Zero-shot Custom Interpretable Feature Extraction from Clinical Notes with Large Language Models"
+    authors:
+      - "Denis McInerney"
+      - "Geoffrey S. Young"
+      - "Jan-Willem van de Meent"
+      - "Byron Wallace"
+    year: 2023
+    publication_type: article
+    venue: "Findings of EMNLP 2023"
+    identifiers:
+      doi: "10.18653/v1/2023.findings-emnlp.568"
+      acl_anthology: "2023.findings-emnlp.568"
+      openalex: "W4389520444"
+    relevance: direct_competitor
+    priority: must_read
+    rationale: "Extracts natural-language high-level features and uses them in a linear model."
+    note_status: pending
+    pdf_status: missing
+
+  - key: balek-2025
+    title: "LLM-based feature generation from text for interpretable machine learning"
+    authors:
+      - "Vojtěch Balek"
+      - "Lukáš Sýkora"
+      - "Vilém Sklenák"
+      - "Tomáš Kliegr"
+    year: 2025
+    publication_type: article
+    venue: "Machine Learning"
+    identifiers:
+      doi: "10.1007/s10994-025-06867-1"
+      openalex: "W4414681764"
+    related_versions:
+      - publication_type: preprint
+        year: 2024
+        identifiers:
+          doi: "10.48550/arXiv.2409.07132"
+          arxiv: "2409.07132"
+          openalex: "W4403621451"
+    relevance: direct_competitor
+    priority: must_read
+    rationale: "Generates interpretable text features for classification and rule discovery."
+    note_status: pending
+    pdf_status: missing
+
+  - key: logipart-2025
+    title: "LogiPart: Local Large Language Models for Data Exploration at Scale with Logical Partitioning"
+    authors:
+      - "Tiago Fernandes Tavares"
+    year: 2025
+    publication_type: preprint
+    venue: arXiv
+    identifiers:
+      doi: "10.48550/arXiv.2509.22211"
+      arxiv: "2509.22211"
+      openalex: "W7083679346"
+    relevance: direct_competitor
+    priority: must_read
+    rationale: "Combines natural-language logical partitions with NLI-based assignment."
+    note_status: pending
+    pdf_status: cached
+    local_pdf: "pdfs/2509.22211v3.pdf"
+
+  - key: yin-2019
+    title: "Benchmarking Zero-shot Text Classification: Datasets, Evaluation and Entailment Approach"
+    authors:
+      - "Wenpeng Yin"
+      - "Jamaal Hay"
+      - "Dan Roth"
+    year: 2019
+    publication_type: article
+    venue: "EMNLP-IJCNLP 2019"
+    identifiers:
+      doi: "10.18653/v1/D19-1404"
+      acl_anthology: "D19-1404"
+      openalex: "W2970200208"
+    relevance: component_basis
+    priority: must_read
+    rationale: "Provides the core entailment formulation for zero-shot text classification."
+    note_status: pending
+    pdf_status: missing
+
+  - key: cosma-2026
+    title: "Automatic Prompt Optimization for Dataset-Level Feature Discovery"
+    authors:
+      - "Adrian Cosma"
+      - "Oleg Szehr"
+      - "David Kletz"
+      - "Alessandro Antonucci"
+      - "Olivier Pelletier"
+    year: 2026
+    publication_type: preprint
+    venue: arXiv
+    identifiers:
+      doi: "10.48550/arXiv.2601.13922"
+      arxiv: "2601.13922"
+      openalex: "W7125115128"
+    relevance: candidate_related_work
+    priority: to_review
+    rationale: "Existing local PDF whose dataset-level feature discovery framing may be relevant to SemAxis."
+    note_status: pending
+    pdf_status: cached
+    local_pdf: "pdfs/2601.13922v1.pdf"

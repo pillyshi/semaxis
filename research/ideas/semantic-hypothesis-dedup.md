@@ -1,0 +1,65 @@
+# Issue Candidate: Add Semantic Deduplication For Generated Hypotheses
+
+## Status
+
+Candidate for GitHub issue after scope review.
+
+## Motivation
+
+`SupervisedTransformer` and `UnsupervisedTransformer` currently store all
+hypotheses returned by the generator and score every retained hypothesis with
+NLI. Semantically repeated hypotheses therefore create redundant output
+columns, make coefficient-based explanations noisier, and increase NLI
+inference cost.
+
+FELIX addresses a closely related problem by embedding generated feature
+schemas, clustering semantically related candidates, and retaining a
+representative feature from each cluster.
+
+## Evidence
+
+- Malberg, Mosca, Groh. 2024. *FELIX: Automatic and Interpretable Feature
+  Engineering Using LLMs*. Sec. 3.2 describes feature consolidation by
+  embedding, HDBSCAN clustering, and representative selection.
+- [`../notes/felix-2024.md`](../notes/felix-2024.md) records the direct
+  comparison with SemAxis.
+- Current implementation appends generated hypotheses without a consolidation
+  step in `src/semaxis/supervised.py` and `src/semaxis/unsupervised.py`.
+
+## Proposed Scope
+
+- Add an optional post-generation pruning strategy for `features_`.
+- Begin with deterministic embedding-similarity deduplication using a
+  configurable similarity threshold; avoid requiring HDBSCAN in the first
+  implementation.
+- Ensure `SupervisedTransformer.feature_meta_` stays aligned with retained
+  hypotheses.
+- Expose enough retained/pruned information to report redundancy and NLI cost.
+- Add focused unit tests for deterministic pruning, disabled behavior, and
+  `feature_meta_` alignment.
+
+## Acceptance Criteria
+
+- Users can enable semantic hypothesis deduplication through transformer
+  configuration without changing existing default behavior.
+- Duplicate or near-duplicate hypotheses are removed deterministically under a
+  mocked embedding matrix.
+- Supervised feature metadata remains parallel to the retained feature list.
+- Tests cover both supervised and unsupervised transformers.
+- A small comparison records generated count, retained count, and number of
+  NLI-scored columns with and without deduplication.
+
+## Out Of Scope
+
+- Making deduplication the default.
+- Reproducing FELIX end-to-end.
+- Implementing HDBSCAN or full feature clustering before a simpler threshold
+  method is evaluated.
+- Running a multi-dataset benchmark.
+
+## Open Design Choice
+
+Deduplication can operate globally or within each supervised class contrast.
+Global pruning reduces cost most aggressively; per-contrast pruning preserves
+the provenance encoded by `feature_meta_`. This should be decided before
+implementation.

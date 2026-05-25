@@ -22,5 +22,8 @@ output/
 # Memos
 memo/
 
+# Research paper binaries (metadata and notes remain tracked)
+research/pdfs/
+
 # OS
 .DS_Store

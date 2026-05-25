@@ -17,6 +17,7 @@ numpy = ">=1.26"
 pytest = "*"
 ruff = "*"
 mypy = "*"
+pyalex = "^0.21"
 
 [tool.poetry.group.langchain]
 optional = true
