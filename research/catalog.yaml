@@ -134,8 +134,9 @@ papers:
     relevance: component_basis
     priority: must_read
     rationale: "Provides the core entailment formulation for zero-shot text classification."
-    note_status: pending
-    pdf_status: missing
+    note_status: drafted
+    pdf_status: cached
+    local_pdf: "pdfs/yin-2019.pdf"
 
   - key: cosma-2026
     title: "Automatic Prompt Optimization for Dataset-Level Feature Discovery"

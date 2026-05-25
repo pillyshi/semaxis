@@ -61,6 +61,13 @@ more expensive feature-generation process.
   hazard-category target.
 - [`../notes/balek-2025.md`](../notes/balek-2025.md) records this automated
   discovery workflow and its similarity to supervised SemAxis generation.
+- Yin et al. 2019. *Benchmarking Zero-shot Text Classification*. The paper
+  turns class labels into NLI hypotheses and shows that label wording
+  (`word`, `definition`, or a combination) changes results across tasks and
+  entailment models. This makes direct zero-shot NLI the nearest baseline when
+  generated features merely paraphrase labels.
+- [`../notes/yin-2019.md`](../notes/yin-2019.md) records the entailment
+  formulation and hypothesis-wording sensitivity.
 - Current `src/semaxis/supervised.py` passes class labels to generation and
   stores all returned hypotheses without a leakage audit.
 
@@ -97,6 +104,8 @@ more expensive feature-generation process.
 - The result reports flagged-hypothesis rate and before/after filtering
   performance rather than inferring an effect from incidence alone.
 - Direct zero-shot NLI is included or its exclusion is justified.
+- The direct baseline and generated-hypothesis comparison retains the actual
+  hypothesis wording used for measurement.
 - Findings are recorded in a research note before implementing automatic
   filtering as a default behavior.
 
