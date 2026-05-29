@@ -15,7 +15,7 @@ Both transformers are sklearn-compatible: they work inside `Pipeline` and are sa
 ## Installation
 
 ```bash
-pip install git+https://github.com/pillyshi/semaxis.git
+pip install semaxis
 ```
 
 ---
