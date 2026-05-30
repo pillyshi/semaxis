@@ -18,6 +18,11 @@ pytest = "*"
 ruff = "*"
 mypy = "*"
 pyalex = "^0.21"
+
+[tool.poetry.group.publish]
+optional = true
+
+[tool.poetry.group.publish.dependencies]
 twine = "^6.2.0"
 
 [tool.poetry.group.langchain]

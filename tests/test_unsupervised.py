@@ -183,10 +183,13 @@ def test_sklearn_clone_with_llm_client_instance():
 
 def test_sklearn_clone_preserves_params():
     llm = MagicMock()
-    t = UnsupervisedTransformer(llm=llm, nli_model="my-nli", n_features=7)
+    t = UnsupervisedTransformer(
+        llm=llm, nli_model="my-nli", n_features=7,
+        context_limit=50_000, language="en", seed=42,
+        sample_method="kmeans", embedding_model="my-embed",
+    )
     cloned = clone(t)
-    assert cloned.nli_model == "my-nli"
-    assert cloned.n_features == 7
+    assert cloned.get_params(deep=False) == t.get_params(deep=False)
 
 
 def test_sklearn_clone_with_string_llm():

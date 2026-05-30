@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import random
-from typing import Any
+from typing import Any, Self
 
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -65,6 +65,12 @@ class UnsupervisedTransformer(BaseEstimator, TransformerMixin):
             ("clf", LogisticRegression()),
         ])
         cross_val_score(pipe, texts, labels, cv=5)
+
+    Note:
+        When ``llm`` is a non-picklable client instance (e.g. ``LLMClient``),
+        parallel execution via joblib's loky backend (``n_jobs != 1``) will
+        still fail because joblib pickles estimators for subprocess dispatch.
+        Use ``n_jobs=1`` or ``prefer="threads"`` in that case.
     """
 
     def __init__(
@@ -87,7 +93,7 @@ class UnsupervisedTransformer(BaseEstimator, TransformerMixin):
         self.sample_method = sample_method
         self.embedding_model = embedding_model
 
-    def __sklearn_clone__(self) -> UnsupervisedTransformer:
+    def __sklearn_clone__(self) -> Self:
         return type(self)(**self.get_params(deep=False))
 
     def fit(self, texts: list[str], y=None) -> UnsupervisedTransformer:
