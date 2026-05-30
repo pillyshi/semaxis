@@ -198,6 +198,21 @@ def test_sklearn_clone_with_string_llm():
     assert cloned.llm == "gpt-4o"
 
 
+def test_sklearn_clone_preserves_sklearn_output_config():
+    t = UnsupervisedTransformer(llm=MagicMock(), nli_model="m")
+    t._sklearn_output_config = {"transform": "pandas"}
+    cloned = clone(t)
+    assert cloned._sklearn_output_config == {"transform": "pandas"}
+
+
+def test_sklearn_clone_preserves_metadata_request():
+    t = UnsupervisedTransformer(llm=MagicMock(), nli_model="m")
+    t._metadata_request = {"key": "value"}
+    cloned = clone(t)
+    assert cloned._metadata_request == {"key": "value"}
+    assert cloned._metadata_request is not t._metadata_request  # deep-copied
+
+
 def test_sample_method_kmeans_calls_sentence_transformer():
     llm = _make_llm(2)
     nli = _make_nli()
