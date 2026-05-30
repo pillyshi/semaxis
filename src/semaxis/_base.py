@@ -15,7 +15,7 @@ class _LLMTransformerMixin:
         # Preserve set_output() and metadata routing config, mirroring what
         # BaseEstimator._clone_parametrized copies after construction.
         if hasattr(self, "_sklearn_output_config"):
-            new._sklearn_output_config = copy.deepcopy(self._sklearn_output_config)
+            setattr(new, "_sklearn_output_config", copy.deepcopy(self._sklearn_output_config))
         if hasattr(self, "_metadata_request"):
-            new._metadata_request = copy.deepcopy(self._metadata_request)
+            setattr(new, "_metadata_request", copy.deepcopy(self._metadata_request))
         return new
