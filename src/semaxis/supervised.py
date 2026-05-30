@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import random
 from itertools import combinations
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, Self
+
+from ._base import _LLMTransformerMixin
 
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -52,7 +54,7 @@ class FeatureMeta(NamedTuple):
     negative: Any
 
 
-class SupervisedTransformer(BaseEstimator, TransformerMixin):
+class SupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMixin):
     """Sklearn-compatible transformer that generates discriminative NLI features.
 
     Fits by generating hypotheses (via LLM) that distinguish between classes,
@@ -79,6 +81,17 @@ class SupervisedTransformer(BaseEstimator, TransformerMixin):
             ("clf", LogisticRegression()),
         ])
         cross_val_score(pipe, texts, labels, cv=5)
+
+    Note:
+        When ``llm`` is a non-picklable client instance (e.g. ``LLMClient``),
+        parallel execution via joblib's loky backend (``n_jobs`` other than
+        ``1`` or ``None``, e.g. ``n_jobs=-1``) will
+        still fail because joblib pickles estimators for subprocess dispatch.
+        Use ``n_jobs=1`` or the threading backend::
+
+            import joblib
+            with joblib.parallel_backend("threading"):
+                cross_val_score(pipe, texts, labels, cv=5, n_jobs=-1)
     """
 
     def __init__(
@@ -103,7 +116,7 @@ class SupervisedTransformer(BaseEstimator, TransformerMixin):
         self.sample_method = sample_method
         self.embedding_model = embedding_model
 
-    def fit(self, texts: list[str], y: Any) -> SupervisedTransformer:
+    def fit(self, texts: list[str], y: Any) -> Self:
         """Generate discriminative hypotheses from training texts and labels.
 
         Args:

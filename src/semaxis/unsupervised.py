@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import random
-from typing import Any
+from typing import Any, Self
+
+from ._base import _LLMTransformerMixin
 
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -45,7 +47,7 @@ def _sample_group(
 _PROMPT_OVERHEAD = 500
 
 
-class UnsupervisedTransformer(BaseEstimator, TransformerMixin):
+class UnsupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMixin):
     """Sklearn-compatible transformer that generates NLI features from unlabeled texts.
 
     Fits by generating hypotheses (via LLM) that characterize the text collection,
@@ -65,6 +67,17 @@ class UnsupervisedTransformer(BaseEstimator, TransformerMixin):
             ("clf", LogisticRegression()),
         ])
         cross_val_score(pipe, texts, labels, cv=5)
+
+    Note:
+        When ``llm`` is a non-picklable client instance (e.g. ``LLMClient``),
+        parallel execution via joblib's loky backend (``n_jobs`` other than
+        ``1`` or ``None``, e.g. ``n_jobs=-1``) will
+        still fail because joblib pickles estimators for subprocess dispatch.
+        Use ``n_jobs=1`` or the threading backend::
+
+            import joblib
+            with joblib.parallel_backend("threading"):
+                cross_val_score(pipe, texts, labels, cv=5, n_jobs=-1)
     """
 
     def __init__(
@@ -87,7 +100,7 @@ class UnsupervisedTransformer(BaseEstimator, TransformerMixin):
         self.sample_method = sample_method
         self.embedding_model = embedding_model
 
-    def fit(self, texts: list[str], y=None) -> UnsupervisedTransformer:
+    def fit(self, texts: list[str], y=None) -> Self:
         """Generate hypotheses from texts using LLM.
 
         Args:
