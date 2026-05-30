@@ -84,7 +84,11 @@ class SupervisedTransformer(BaseEstimator, TransformerMixin):
         When ``llm`` is a non-picklable client instance (e.g. ``LLMClient``),
         parallel execution via joblib's loky backend (``n_jobs != 1``) will
         still fail because joblib pickles estimators for subprocess dispatch.
-        Use ``n_jobs=1`` or ``prefer="threads"`` in that case.
+        Use ``n_jobs=1`` or the threading backend::
+
+            import joblib
+            with joblib.parallel_backend("threading"):
+                cross_val_score(pipe, texts, labels, cv=5, n_jobs=-1)
     """
 
     def __init__(
@@ -112,7 +116,7 @@ class SupervisedTransformer(BaseEstimator, TransformerMixin):
     def __sklearn_clone__(self) -> Self:
         return type(self)(**self.get_params(deep=False))
 
-    def fit(self, texts: list[str], y: Any) -> SupervisedTransformer:
+    def fit(self, texts: list[str], y: Any) -> Self:
         """Generate discriminative hypotheses from training texts and labels.
 
         Args:
