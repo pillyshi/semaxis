@@ -4,6 +4,8 @@ import random
 from itertools import combinations
 from typing import Any, NamedTuple, Self
 
+from ._base import _LLMTransformerMixin
+
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import LabelEncoder
@@ -52,7 +54,7 @@ class FeatureMeta(NamedTuple):
     negative: Any
 
 
-class SupervisedTransformer(BaseEstimator, TransformerMixin):
+class SupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMixin):
     """Sklearn-compatible transformer that generates discriminative NLI features.
 
     Fits by generating hypotheses (via LLM) that distinguish between classes,
@@ -112,9 +114,6 @@ class SupervisedTransformer(BaseEstimator, TransformerMixin):
         self.seed = seed
         self.sample_method = sample_method
         self.embedding_model = embedding_model
-
-    def __sklearn_clone__(self) -> Self:
-        return type(self)(**self.get_params(deep=False))
 
     def fit(self, texts: list[str], y: Any) -> Self:
         """Generate discriminative hypotheses from training texts and labels.

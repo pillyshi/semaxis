@@ -3,6 +3,8 @@ from __future__ import annotations
 import random
 from typing import Any, Self
 
+from ._base import _LLMTransformerMixin
+
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 
@@ -45,7 +47,7 @@ def _sample_group(
 _PROMPT_OVERHEAD = 500
 
 
-class UnsupervisedTransformer(BaseEstimator, TransformerMixin):
+class UnsupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMixin):
     """Sklearn-compatible transformer that generates NLI features from unlabeled texts.
 
     Fits by generating hypotheses (via LLM) that characterize the text collection,
@@ -96,9 +98,6 @@ class UnsupervisedTransformer(BaseEstimator, TransformerMixin):
         self.seed = seed
         self.sample_method = sample_method
         self.embedding_model = embedding_model
-
-    def __sklearn_clone__(self) -> Self:
-        return type(self)(**self.get_params(deep=False))
 
     def fit(self, texts: list[str], y=None) -> Self:
         """Generate hypotheses from texts using LLM.
