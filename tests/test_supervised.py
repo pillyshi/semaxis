@@ -1,8 +1,10 @@
 """Unit tests for SupervisedTransformer."""
+import threading
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
+from sklearn.base import clone
 
 from semaxis import SupervisedTransformer
 
@@ -263,6 +265,35 @@ def test_sample_method_kmeans_fits_without_error():
 def test_sample_method_votek_fits_without_error():
     t = _fit_binary_with_method("votek")
     assert t.features_ == ["hyp 0", "hyp 1"]
+
+
+# ---------------------------------------------------------------------------
+# sklearn clone compatibility
+# ---------------------------------------------------------------------------
+
+def test_sklearn_clone_with_llm_client_instance():
+    """clone() must not raise even when llm holds a non-picklable object."""
+    llm = MagicMock()
+    llm._lock = threading.RLock()  # simulate unpicklable state
+    t = SupervisedTransformer(llm=llm, nli_model="m", n_features=2)
+    cloned = clone(t)
+    assert cloned is not t
+    assert cloned.llm is llm
+
+
+def test_sklearn_clone_preserves_params():
+    llm = MagicMock()
+    t = SupervisedTransformer(llm=llm, nli_model="my-nli", n_features=5, strategy="ovo")
+    cloned = clone(t)
+    assert cloned.nli_model == "my-nli"
+    assert cloned.n_features == 5
+    assert cloned.strategy == "ovo"
+
+
+def test_sklearn_clone_with_string_llm():
+    t = SupervisedTransformer(llm="gpt-4o", nli_model="m")
+    cloned = clone(t)
+    assert cloned.llm == "gpt-4o"
 
 
 def test_sample_method_kmeans_calls_sentence_transformer():

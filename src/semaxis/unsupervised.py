@@ -87,6 +87,9 @@ class UnsupervisedTransformer(BaseEstimator, TransformerMixin):
         self.sample_method = sample_method
         self.embedding_model = embedding_model
 
+    def __sklearn_clone__(self) -> UnsupervisedTransformer:
+        return type(self)(**self.get_params(deep=False))
+
     def fit(self, texts: list[str], y=None) -> UnsupervisedTransformer:
         """Generate hypotheses from texts using LLM.
 

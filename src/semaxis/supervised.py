@@ -103,6 +103,9 @@ class SupervisedTransformer(BaseEstimator, TransformerMixin):
         self.sample_method = sample_method
         self.embedding_model = embedding_model
 
+    def __sklearn_clone__(self) -> SupervisedTransformer:
+        return type(self)(**self.get_params(deep=False))
+
     def fit(self, texts: list[str], y: Any) -> SupervisedTransformer:
         """Generate discriminative hypotheses from training texts and labels.
 
