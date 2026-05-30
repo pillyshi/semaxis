@@ -84,7 +84,8 @@ class SupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMixi
 
     Note:
         When ``llm`` is a non-picklable client instance (e.g. ``LLMClient``),
-        parallel execution via joblib's loky backend (``n_jobs != 1``) will
+        parallel execution via joblib's loky backend (``n_jobs`` other than
+        ``1`` or ``None``, e.g. ``n_jobs=-1``) will
         still fail because joblib pickles estimators for subprocess dispatch.
         Use ``n_jobs=1`` or the threading backend::
 
