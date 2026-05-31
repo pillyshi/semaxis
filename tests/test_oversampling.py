@@ -208,6 +208,16 @@ def test_fit_resample_pos_sampled_empty_warns():
         sampler.fit_resample(["pos A", "pos B", "neg C", "neg D"], [1, 1, 0, 0])
 
 
+def test_fit_resample_neg_sampled_empty_warns():
+    # Same budget setup; negative texts also all exceed budget → neg_sampled=[]
+    sampler = HardPositiveOverSampler(llm=MagicMock(), n_synthesized=1, context_limit=2_000)
+    llm = _make_llm(n_hard_positives=1)
+    llm.count_tokens.return_value = 1_000
+    sampler.llm = llm
+    with pytest.warns(UserWarning, match="negative texts exceed"):
+        sampler.fit_resample(["pos A", "pos B", "neg C", "neg D"], [1, 1, 0, 0])
+
+
 def test_sample_method_random_default():
     sampler = HardPositiveOverSampler(llm=MagicMock())
     assert sampler.sample_method == "random"
