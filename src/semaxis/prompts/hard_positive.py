@@ -32,16 +32,27 @@ Negative:
 
 Count: {n_synthesized_texts}"""
 
+_LANGUAGE_INSTRUCTION = """\
+
+Language constraint:
+- Write only hard_positives[].text in {language}.
+- Do not force positive_features, negative_features, boundary_features, \
+positive_evidence, or confusing_evidence to be written in {language}."""
+
 
 def build_user_message(
     pos_texts: list[str],
     neg_texts: list[str],
     n_synthesized: int,
+    language: str | None = None,
 ) -> str:
     positive_list = "\n".join(f"{i + 1}. {t}" for i, t in enumerate(pos_texts)) if pos_texts else "(none)"
     negative_list = "\n".join(f"{i + 1}. {t}" for i, t in enumerate(neg_texts)) if neg_texts else "(none)"
-    return _USER_TEMPLATE.format(
+    message = _USER_TEMPLATE.format(
         positive_list=positive_list,
         negative_list=negative_list,
         n_synthesized_texts=n_synthesized,
     )
+    if language:
+        message += _LANGUAGE_INSTRUCTION.format(language=language)
+    return message
