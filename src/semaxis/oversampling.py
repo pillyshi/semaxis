@@ -135,6 +135,21 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
             self.sample_method, self.embedding_model, _rng,
         )
 
+        if not pos_sampled:
+            warnings.warn(
+                "All positive texts exceed the per-group token budget; "
+                "the LLM will receive no positive examples.",
+                UserWarning,
+                stacklevel=2,
+            )
+        if not neg_sampled:
+            warnings.warn(
+                "All negative texts exceed the per-group token budget; "
+                "the LLM will receive no negative examples.",
+                UserWarning,
+                stacklevel=2,
+            )
+
         messages = [
             {"role": "system", "content": prompts.SYSTEM},
             {"role": "user", "content": prompts.build_user_message(
@@ -154,7 +169,7 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
             warnings.warn(
                 f"LLM returned {actual} hard positives, expected {self.n_synthesized}",
                 UserWarning,
-                stacklevel=3,
+                stacklevel=2,
             )
 
         generated_texts = [hp.text for hp in self.generation_result_.hard_positives]
