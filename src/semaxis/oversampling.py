@@ -66,6 +66,7 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
         llm: BaseLLMClient | str,
         n_synthesized: int = 10,
         context_limit: int = 100_000,
+        language: str | None = None,
         seed: int | None = None,
         sample_method: str = "random",
         embedding_model: str = "paraphrase-albert-small-v2",
@@ -73,6 +74,7 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
         self.llm = llm
         self.n_synthesized = n_synthesized
         self.context_limit = context_limit
+        self.language = language
         self.seed = seed
         self.sample_method = sample_method
         self.embedding_model = embedding_model
@@ -156,6 +158,7 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
                 pos_texts=pos_sampled,
                 neg_texts=neg_sampled,
                 n_synthesized=self.n_synthesized,
+                language=self.language,
             )},
         ]
         self.generation_result_ = _llm.complete_structured(messages, HardPositiveGenerationResult)

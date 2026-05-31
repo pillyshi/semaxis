@@ -223,6 +223,27 @@ def test_sample_method_random_default():
     assert sampler.sample_method == "random"
 
 
+def test_language_default_none():
+    sampler = HardPositiveOverSampler(llm=MagicMock())
+    assert sampler.language is None
+
+
+def test_language_instruction_applies_only_to_generated_text():
+    sampler = HardPositiveOverSampler(
+        llm=MagicMock(),
+        n_synthesized=1,
+        language="Japanese",
+    )
+    llm = _make_llm(n_hard_positives=1)
+    _fit_resample(sampler, llm)
+
+    messages = llm.complete_structured.call_args.args[0]
+    user_message = messages[1]["content"]
+    assert "Write only hard_positives[].text in Japanese" in user_message
+    assert "Do not force positive_features" in user_message
+    assert "confusing_evidence to be written in Japanese" in user_message
+
+
 def _fit_resample_with_method(method: str) -> tuple[list[str], list[int]]:
     sampler = HardPositiveOverSampler(llm=MagicMock(), n_synthesized=1, sample_method=method)
     texts = ["pos A", "pos B", "neg C", "neg D"]
