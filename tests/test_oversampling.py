@@ -167,15 +167,31 @@ def test_fit_resample_context_limit_zero_budget_raises():
         sampler.fit_resample(["a", "b"], [1, 0])
 
 
-def test_fit_resample_n_synthesized_zero_raises():
+def test_fit_resample_n_synthesized_zero_returns_original():
     sampler = HardPositiveOverSampler(llm=MagicMock(), n_synthesized=0)
-    with pytest.raises(ValueError, match="n_synthesized"):
-        sampler.fit_resample(["a", "b"], [1, 0])
+    llm = MagicMock()
+    sampler.llm = llm
+    X_aug, y_aug = sampler.fit_resample(["a", "b"], [1, 0])
+    assert X_aug == ["a", "b"]
+    assert y_aug == [1, 0]
+    llm.complete_structured.assert_not_called()
 
 
 def test_fit_resample_n_synthesized_negative_raises():
     sampler = HardPositiveOverSampler(llm=MagicMock(), n_synthesized=-5)
     with pytest.raises(ValueError, match="n_synthesized"):
+        sampler.fit_resample(["a", "b"], [1, 0])
+
+
+def test_fit_resample_batch_size_invalid_raises():
+    sampler = HardPositiveOverSampler(llm=MagicMock(), batch_size=0)
+    with pytest.raises(ValueError, match="batch_size"):
+        sampler.fit_resample(["a", "b"], [1, 0])
+
+
+def test_fit_resample_max_examples_per_class_invalid_raises():
+    sampler = HardPositiveOverSampler(llm=MagicMock(), max_examples_per_class=0)
+    with pytest.raises(ValueError, match="max_examples_per_class"):
         sampler.fit_resample(["a", "b"], [1, 0])
 
 
@@ -193,7 +209,7 @@ def test_fit_resample_count_mismatch_warns():
     sampler = HardPositiveOverSampler(llm=MagicMock(), n_synthesized=3)
     llm = _make_llm(n_hard_positives=1)  # LLM returns 1, but 3 requested
     sampler.llm = llm
-    with pytest.warns(UserWarning, match="1 hard positives, expected 3"):
+    with pytest.warns(UserWarning, match="1 accepted hard positives, expected 3"):
         sampler.fit_resample(["pos A", "pos B", "neg C", "neg D"], [1, 1, 0, 0])
 
 
@@ -242,6 +258,162 @@ def test_language_instruction_applies_only_to_generated_text():
     assert "Write only hard_positives[].text in Japanese" in user_message
     assert "Do not force positive_features" in user_message
     assert "confusing_evidence to be written in Japanese" in user_message
+
+
+def test_default_n_synthesized_balances_positive_class():
+    sampler = HardPositiveOverSampler(llm=MagicMock())
+    llm = _make_llm(n_hard_positives=1)
+    sampler.llm = llm
+    X_aug, y_aug = sampler.fit_resample(
+        ["pos A", "neg B", "neg C"],
+        [1, 0, 0],
+    )
+    assert X_aug[-1:] == ["gen 0"]
+    assert y_aug == [1, 0, 0, 1]
+
+
+def test_default_n_synthesized_noops_when_positive_not_smaller():
+    sampler = HardPositiveOverSampler(llm=MagicMock())
+    llm = MagicMock()
+    sampler.llm = llm
+    X_aug, y_aug = sampler.fit_resample(
+        ["pos A", "pos B", "neg C"],
+        [1, 1, 0],
+    )
+    assert X_aug == ["pos A", "pos B", "neg C"]
+    assert y_aug == [1, 1, 0]
+    llm.complete_structured.assert_not_called()
+
+
+def test_fit_resample_generates_iterative_batches():
+    sampler = HardPositiveOverSampler(llm=MagicMock(), n_synthesized=5, batch_size=2)
+    llm = MagicMock()
+    llm.count_tokens.return_value = 1
+    llm.complete_structured.side_effect = [
+        HardPositiveGenerationResult(
+            positive_features=["pf1"],
+            negative_features=["nf1"],
+            boundary_features=[BoundaryFeature(feature="bf1", importance=0.9)],
+            hard_positives=[
+                HardPositive(text="gen 0", positive_evidence=[], confusing_evidence=[]),
+                HardPositive(text="gen 1", positive_evidence=[], confusing_evidence=[]),
+            ],
+        ),
+        HardPositiveGenerationResult(
+            positive_features=["pf2"],
+            negative_features=["nf2"],
+            boundary_features=[BoundaryFeature(feature="bf2", importance=0.8)],
+            hard_positives=[
+                HardPositive(text="gen 2", positive_evidence=[], confusing_evidence=[]),
+                HardPositive(text="gen 3", positive_evidence=[], confusing_evidence=[]),
+            ],
+        ),
+        HardPositiveGenerationResult(
+            positive_features=["pf3"],
+            negative_features=["nf3"],
+            boundary_features=[BoundaryFeature(feature="bf3", importance=0.7)],
+            hard_positives=[
+                HardPositive(text="gen 4", positive_evidence=[], confusing_evidence=[]),
+            ],
+        ),
+    ]
+    sampler.llm = llm
+
+    X_aug, _ = sampler.fit_resample(["pos A", "neg B"], [1, 0])
+
+    assert X_aug[-5:] == ["gen 0", "gen 1", "gen 2", "gen 3", "gen 4"]
+    assert llm.complete_structured.call_count == 3
+    requested_counts = [
+        call.args[0][1]["content"].split("Count: ")[1]
+        for call in llm.complete_structured.call_args_list
+    ]
+    assert requested_counts == ["2", "2", "1"]
+    assert sampler.generation_result_.positive_features == ["pf1", "pf2", "pf3"]
+
+
+def test_fit_resample_continues_after_short_llm_responses():
+    sampler = HardPositiveOverSampler(llm=MagicMock(), n_synthesized=3, batch_size=2)
+    llm = MagicMock()
+    llm.count_tokens.return_value = 1
+    llm.complete_structured.side_effect = [
+        HardPositiveGenerationResult(
+            positive_features=[],
+            negative_features=[],
+            boundary_features=[],
+            hard_positives=[
+                HardPositive(text=f"gen {i}", positive_evidence=[], confusing_evidence=[])
+            ],
+        )
+        for i in range(3)
+    ]
+    sampler.llm = llm
+
+    X_aug, _ = sampler.fit_resample(["pos A", "neg B"], [1, 0])
+
+    assert X_aug[-3:] == ["gen 0", "gen 1", "gen 2"]
+    assert llm.complete_structured.call_count == 3
+
+
+def test_fit_resample_deduplicates_exact_texts_by_default():
+    sampler = HardPositiveOverSampler(llm=MagicMock(), n_synthesized=2, batch_size=2)
+    llm = MagicMock()
+    llm.count_tokens.return_value = 1
+    llm.complete_structured.side_effect = [
+        HardPositiveGenerationResult(
+            positive_features=[],
+            negative_features=[],
+            boundary_features=[],
+            hard_positives=[
+                HardPositive(text="pos A", positive_evidence=[], confusing_evidence=[]),
+                HardPositive(text="gen 0", positive_evidence=[], confusing_evidence=[]),
+            ],
+        ),
+        HardPositiveGenerationResult(
+            positive_features=[],
+            negative_features=[],
+            boundary_features=[],
+            hard_positives=[
+                HardPositive(text="gen 0", positive_evidence=[], confusing_evidence=[]),
+                HardPositive(text="gen 1", positive_evidence=[], confusing_evidence=[]),
+            ],
+        ),
+    ]
+    sampler.llm = llm
+
+    X_aug, _ = sampler.fit_resample(["pos A", "neg B"], [1, 0])
+
+    assert X_aug == ["pos A", "neg B", "gen 0", "gen 1"]
+
+
+def test_fit_resample_deduplicate_false_preserves_exact_duplicates():
+    sampler = HardPositiveOverSampler(
+        llm=MagicMock(),
+        n_synthesized=2,
+        batch_size=2,
+        deduplicate=False,
+    )
+    llm = _make_llm(n_hard_positives=2)
+    llm.complete_structured.return_value.hard_positives[1].text = "gen 0"
+    sampler.llm = llm
+
+    X_aug, _ = sampler.fit_resample(["pos A", "neg B"], [1, 0])
+
+    assert X_aug == ["pos A", "neg B", "gen 0", "gen 0"]
+
+
+def test_fit_resample_max_examples_per_class_caps_prompt_examples():
+    sampler = HardPositiveOverSampler(
+        llm=MagicMock(),
+        n_synthesized=1,
+        max_examples_per_class=1,
+    )
+    llm = _make_llm(n_hard_positives=1)
+    sampler.llm = llm
+
+    sampler.fit_resample(["pos A", "pos B", "neg C", "neg D"], [1, 1, 0, 0])
+
+    user_message = llm.complete_structured.call_args.args[0][1]["content"]
+    assert user_message.count("\n2. ") == 0
 
 
 def _fit_resample_with_method(method: str) -> tuple[list[str], list[int]]:
