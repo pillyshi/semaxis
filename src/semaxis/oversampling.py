@@ -96,10 +96,20 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
                 f"sample_method must be one of {_SAMPLE_METHODS}, got {self.sample_method!r}"
             )
 
+        y_list = list(y)
+        if len(X) != len(y_list):
+            raise ValueError(
+                f"X and y must have the same length, got len(X)={len(X)} and len(y)={len(y_list)}"
+            )
+        label_set = set(y_list)
+        if not label_set <= {0, 1}:
+            raise ValueError(
+                f"y must contain only binary labels {{0, 1}}, got {label_set - {0, 1}}"
+            )
+
         _llm = LLMClient(self.llm) if isinstance(self.llm, str) else self.llm
         _rng = random.Random(self.seed)
 
-        y_list = list(y)
         pos_texts = [t for t, yi in zip(X, y_list) if yi == 1]
         neg_texts = [t for t, yi in zip(X, y_list) if yi == 0]
 

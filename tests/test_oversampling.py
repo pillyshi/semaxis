@@ -124,6 +124,24 @@ def test_sample_method_invalid_raises():
         sampler.fit_resample(["a", "b"], [1, 0])
 
 
+def test_fit_resample_mismatched_lengths_raises():
+    sampler = HardPositiveOverSampler(llm=MagicMock())
+    with pytest.raises(ValueError, match="same length"):
+        sampler.fit_resample(["a", "b", "c"], [1, 0])
+
+
+def test_fit_resample_non_binary_labels_raises():
+    sampler = HardPositiveOverSampler(llm=MagicMock())
+    with pytest.raises(ValueError, match="binary"):
+        sampler.fit_resample(["a", "b", "c"], [0, 1, 2])
+
+
+def test_fit_resample_string_labels_raises():
+    sampler = HardPositiveOverSampler(llm=MagicMock())
+    with pytest.raises(ValueError, match="binary"):
+        sampler.fit_resample(["a", "b"], ["pos", "neg"])
+
+
 def test_sample_method_random_default():
     sampler = HardPositiveOverSampler(llm=MagicMock())
     assert sampler.sample_method == "random"
