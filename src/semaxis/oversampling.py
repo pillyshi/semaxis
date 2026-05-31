@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import random
 import warnings
+from math import ceil
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -64,7 +65,10 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
     def __init__(
         self,
         llm: BaseLLMClient | str,
-        n_synthesized: int = 10,
+        n_synthesized: int | None = None,
+        batch_size: int = 3,
+        max_examples_per_class: int | None = None,
+        deduplicate: bool = True,
         context_limit: int = 100_000,
         language: str | None = None,
         seed: int | None = None,
@@ -73,6 +77,9 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
     ) -> None:
         self.llm = llm
         self.n_synthesized = n_synthesized
+        self.batch_size = batch_size
+        self.max_examples_per_class = max_examples_per_class
+        self.deduplicate = deduplicate
         self.context_limit = context_limit
         self.language = language
         self.seed = seed
@@ -98,8 +105,15 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
             raise ValueError(
                 f"sample_method must be one of {_SAMPLE_METHODS}, got {self.sample_method!r}"
             )
-        if self.n_synthesized < 1:
-            raise ValueError(f"n_synthesized must be >= 1, got {self.n_synthesized}")
+        if self.n_synthesized is not None and self.n_synthesized < 0:
+            raise ValueError(f"n_synthesized must be >= 0 or None, got {self.n_synthesized}")
+        if self.batch_size < 1:
+            raise ValueError(f"batch_size must be >= 1, got {self.batch_size}")
+        if self.max_examples_per_class is not None and self.max_examples_per_class < 1:
+            raise ValueError(
+                "max_examples_per_class must be >= 1 or None, "
+                f"got {self.max_examples_per_class}"
+            )
         if (self.context_limit - _PROMPT_OVERHEAD) // 2 < 1:
             raise ValueError(
                 f"context_limit ({self.context_limit}) leaves no token budget after overhead ({_PROMPT_OVERHEAD})"
@@ -127,46 +141,80 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
         _llm = LLMClient(self.llm) if isinstance(self.llm, str) else self.llm
         _rng = random.Random(self.seed)
 
+        target_count = (
+            max(0, len(neg_texts) - len(pos_texts))
+            if self.n_synthesized is None
+            else self.n_synthesized
+        )
+        self.generation_result_ = HardPositiveGenerationResult(
+            positive_features=[],
+            negative_features=[],
+            boundary_features=[],
+            hard_positives=[],
+        )
+        if target_count == 0:
+            return list(X), y_list
+
         budget = (self.context_limit - _PROMPT_OVERHEAD) // 2
-        pos_sampled = _sample_group(
-            pos_texts, budget, _llm.count_tokens,
-            self.sample_method, self.embedding_model, _rng,
-        )
-        neg_sampled = _sample_group(
-            neg_texts, budget, _llm.count_tokens,
-            self.sample_method, self.embedding_model, _rng,
-        )
+        original_texts = set(X)
+        accepted_texts: set[str] = set()
+        max_batches = max(target_count, ceil(target_count / self.batch_size) * 3)
+        warned_empty_pos = False
+        warned_empty_neg = False
 
-        if not pos_sampled:
-            warnings.warn(
-                "All positive texts exceed the per-group token budget; "
-                "the LLM will receive no positive examples.",
-                UserWarning,
-                stacklevel=2,
+        for _ in range(max_batches):
+            remaining = target_count - len(self.generation_result_.hard_positives)
+            if remaining <= 0:
+                break
+
+            pos_sampled = self._sample_prompt_examples(
+                pos_texts, budget, _llm.count_tokens, _rng
             )
-        if not neg_sampled:
-            warnings.warn(
-                "All negative texts exceed the per-group token budget; "
-                "the LLM will receive no negative examples.",
-                UserWarning,
-                stacklevel=2,
+            neg_sampled = self._sample_prompt_examples(
+                neg_texts, budget, _llm.count_tokens, _rng
             )
 
-        messages = [
-            {"role": "system", "content": prompts.SYSTEM},
-            {"role": "user", "content": prompts.build_user_message(
-                pos_texts=pos_sampled,
-                neg_texts=neg_sampled,
-                n_synthesized=self.n_synthesized,
-                language=self.language,
-            )},
-        ]
-        self.generation_result_ = _llm.complete_structured(messages, HardPositiveGenerationResult)
+            if not pos_sampled and not warned_empty_pos:
+                warnings.warn(
+                    "All positive texts exceed the per-group token budget; "
+                    "the LLM will receive no positive examples.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                warned_empty_pos = True
+            if not neg_sampled and not warned_empty_neg:
+                warnings.warn(
+                    "All negative texts exceed the per-group token budget; "
+                    "the LLM will receive no negative examples.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                warned_empty_neg = True
+
+            batch_count = min(self.batch_size, remaining)
+            messages = [
+                {"role": "system", "content": prompts.SYSTEM},
+                {"role": "user", "content": prompts.build_user_message(
+                    pos_texts=pos_sampled,
+                    neg_texts=neg_sampled,
+                    n_synthesized=batch_count,
+                    language=self.language,
+                )},
+            ]
+            result = _llm.complete_structured(messages, HardPositiveGenerationResult)
+            self.generation_result_.positive_features.extend(result.positive_features)
+            self.generation_result_.negative_features.extend(result.negative_features)
+            self.generation_result_.boundary_features.extend(result.boundary_features)
+            for hp in result.hard_positives:
+                if len(self.generation_result_.hard_positives) >= target_count:
+                    break
+                if self._accept_generated_text(hp.text, original_texts, accepted_texts):
+                    self.generation_result_.hard_positives.append(hp)
 
         actual = len(self.generation_result_.hard_positives)
-        if actual != self.n_synthesized:
+        if actual != target_count:
             warnings.warn(
-                f"LLM returned {actual} hard positives, expected {self.n_synthesized}",
+                f"LLM returned {actual} accepted hard positives, expected {target_count}",
                 UserWarning,
                 stacklevel=2,
             )
@@ -175,3 +223,34 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
         X_aug = list(X) + generated_texts
         y_aug = y_list + [1] * len(generated_texts)
         return X_aug, y_aug
+
+    def _sample_prompt_examples(
+        self,
+        texts: list[str],
+        budget: int,
+        tokenizer_fn: Any,
+        rng: random.Random,
+    ) -> list[str]:
+        sampled = _sample_group(
+            texts, budget, tokenizer_fn,
+            self.sample_method, self.embedding_model, rng,
+        )
+        if (
+            self.max_examples_per_class is not None
+            and len(sampled) > self.max_examples_per_class
+        ):
+            sampled = rng.sample(sampled, self.max_examples_per_class)
+        return sampled
+
+    def _accept_generated_text(
+        self,
+        text: str,
+        original_texts: set[str],
+        accepted_texts: set[str],
+    ) -> bool:
+        if not self.deduplicate:
+            return True
+        if text in original_texts or text in accepted_texts:
+            return False
+        accepted_texts.add(text)
+        return True
