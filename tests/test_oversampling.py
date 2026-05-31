@@ -20,19 +20,19 @@ from semaxis import (
 def _make_llm(n_hard_positives: int = 1) -> MagicMock:
     llm = MagicMock()
     llm.count_tokens.return_value = 1
-    llm.complete_json.return_value = {
-        "positive_features": ["pf1"],
-        "negative_features": ["nf1"],
-        "boundary_features": [{"feature": "bf1", "importance": 0.9}],
-        "hard_positives": [
-            {
-                "text": f"gen {i}",
-                "positive_evidence": ["evidence"],
-                "confusing_evidence": ["confusing"],
-            }
+    llm.complete_structured.return_value = HardPositiveGenerationResult(
+        positive_features=["pf1"],
+        negative_features=["nf1"],
+        boundary_features=[BoundaryFeature(feature="bf1", importance=0.9)],
+        hard_positives=[
+            HardPositive(
+                text=f"gen {i}",
+                positive_evidence=["evidence"],
+                confusing_evidence=["confusing"],
+            )
             for i in range(n_hard_positives)
         ],
-    }
+    )
     return llm
 
 
@@ -183,7 +183,7 @@ def test_fit_resample_validation_error_raises_value_error():
     sampler = HardPositiveOverSampler(llm=MagicMock(), n_synthesized=1)
     llm = MagicMock()
     llm.count_tokens.return_value = 1
-    llm.complete_json.return_value = {"unexpected": "structure"}
+    llm.complete_structured.side_effect = ValueError("LLM returned an unexpected JSON structure")
     sampler.llm = llm
     with pytest.raises(ValueError, match="unexpected JSON structure"):
         sampler.fit_resample(["pos A", "neg B"], [1, 0])
