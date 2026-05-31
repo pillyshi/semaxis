@@ -142,6 +142,42 @@ def test_fit_resample_string_labels_raises():
         sampler.fit_resample(["a", "b"], ["pos", "neg"])
 
 
+def test_fit_resample_all_positive_raises():
+    sampler = HardPositiveOverSampler(llm=MagicMock())
+    with pytest.raises(ValueError, match="negative"):
+        sampler.fit_resample(["a", "b"], [1, 1])
+
+
+def test_fit_resample_all_negative_raises():
+    sampler = HardPositiveOverSampler(llm=MagicMock())
+    with pytest.raises(ValueError, match="positive"):
+        sampler.fit_resample(["a", "b"], [0, 0])
+
+
+def test_fit_resample_context_limit_too_small_raises():
+    sampler = HardPositiveOverSampler(llm=MagicMock(), context_limit=400)
+    with pytest.raises(ValueError, match="context_limit"):
+        sampler.fit_resample(["a", "b"], [1, 0])
+
+
+def test_fit_resample_validation_error_raises_value_error():
+    sampler = HardPositiveOverSampler(llm=MagicMock(), n_synthesized=1)
+    llm = MagicMock()
+    llm.count_tokens.return_value = 1
+    llm.complete_json.return_value = {"unexpected": "structure"}
+    sampler.llm = llm
+    with pytest.raises(ValueError, match="unexpected JSON structure"):
+        sampler.fit_resample(["pos A", "neg B"], [1, 0])
+
+
+def test_fit_resample_count_mismatch_warns():
+    sampler = HardPositiveOverSampler(llm=MagicMock(), n_synthesized=3)
+    llm = _make_llm(n_hard_positives=1)  # LLM returns 1, but 3 requested
+    sampler.llm = llm
+    with pytest.warns(UserWarning, match="1 hard positives, expected 3"):
+        sampler.fit_resample(["pos A", "pos B", "neg C", "neg D"], [1, 1, 0, 0])
+
+
 def test_sample_method_random_default():
     sampler = HardPositiveOverSampler(llm=MagicMock())
     assert sampler.sample_method == "random"

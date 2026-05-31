@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import random
-from typing import Any, Self
+import warnings
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 from sklearn.base import BaseEstimator
 
 from ._base import _LLMTransformerMixin
@@ -95,6 +96,10 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
             raise ValueError(
                 f"sample_method must be one of {_SAMPLE_METHODS}, got {self.sample_method!r}"
             )
+        if self.context_limit <= _PROMPT_OVERHEAD:
+            raise ValueError(
+                f"context_limit ({self.context_limit}) must be greater than {_PROMPT_OVERHEAD}"
+            )
 
         y_list = list(y)
         if len(X) != len(y_list):
@@ -112,6 +117,11 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
 
         pos_texts = [t for t, yi in zip(X, y_list) if yi == 1]
         neg_texts = [t for t, yi in zip(X, y_list) if yi == 0]
+
+        if not pos_texts:
+            raise ValueError("y must contain at least one positive (1) sample")
+        if not neg_texts:
+            raise ValueError("y must contain at least one negative (0) sample")
 
         budget = (self.context_limit - _PROMPT_OVERHEAD) // 2
         pos_sampled = _sample_group(
@@ -132,7 +142,18 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
             )},
         ]
         result = _llm.complete_json(messages)
-        self.generation_result_ = HardPositiveGenerationResult.model_validate(result)
+        try:
+            self.generation_result_ = HardPositiveGenerationResult.model_validate(result)
+        except ValidationError as exc:
+            raise ValueError(f"LLM returned an unexpected JSON structure: {exc}") from exc
+
+        actual = len(self.generation_result_.hard_positives)
+        if actual != self.n_synthesized:
+            warnings.warn(
+                f"LLM returned {actual} hard positives, expected {self.n_synthesized}",
+                UserWarning,
+                stacklevel=2,
+            )
 
         generated_texts = [hp.text for hp in self.generation_result_.hard_positives]
         X_aug = list(X) + generated_texts
