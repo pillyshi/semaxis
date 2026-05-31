@@ -4,7 +4,7 @@ import random
 import warnings
 from typing import Any
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field
 from sklearn.base import BaseEstimator
 
 from ._base import _LLMTransformerMixin
@@ -158,11 +158,7 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
                 n_synthesized=self.n_synthesized,
             )},
         ]
-        result = _llm.complete_json(messages)
-        try:
-            self.generation_result_ = HardPositiveGenerationResult.model_validate(result)
-        except ValidationError as exc:
-            raise ValueError(f"LLM returned an unexpected JSON structure: {exc}") from exc
+        self.generation_result_ = _llm.complete_structured(messages, HardPositiveGenerationResult)
 
         actual = len(self.generation_result_.hard_positives)
         if actual != self.n_synthesized:

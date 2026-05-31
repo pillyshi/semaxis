@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Protocol, TypeVar, runtime_checkable
 
 import tiktoken
 from openai import OpenAI
+from pydantic import BaseModel
+
+T = TypeVar("T", bound=BaseModel)
 
 
 @runtime_checkable
@@ -14,6 +17,7 @@ class BaseLLMClient(Protocol):
 
     def complete(self, messages: list[dict[str, str]]) -> str: ...
     def complete_json(self, messages: list[dict[str, str]]) -> Any: ...
+    def complete_structured(self, messages: list[dict[str, str]], response_model: type[T]) -> T: ...
     def count_tokens(self, text: str) -> int: ...
 
 
@@ -45,6 +49,18 @@ class LLMClient:
         )
         content = response.choices[0].message.content or ""
         return json.loads(content)
+
+    def complete_structured(self, messages: list[dict[str, str]], response_model: type[T]) -> T:
+        """Send a structured output request and return a validated Pydantic model instance."""
+        response = self._client.beta.chat.completions.parse(
+            model=self.model,
+            messages=messages,  # type: ignore[arg-type]
+            response_format=response_model,
+        )
+        parsed = response.choices[0].message.parsed
+        if parsed is None:
+            raise ValueError("OpenAI returned a refusal or null parsed response for structured output")
+        return parsed  # type: ignore[return-value]
 
     def count_tokens(self, text: str) -> int:
         """Return the number of tokens in text using the model's tokenizer."""
@@ -85,6 +101,22 @@ class LangChainLLMClient:
         """Invoke the model and extract a JSON object from the response."""
         content = self.complete(messages)
         return _extract_json(content)
+
+    def complete_structured(self, messages: list[dict[str, str]], response_model: type[T]) -> T:
+        """Invoke the model with grammar-constrained structured output."""
+        from langchain_core.messages import HumanMessage, SystemMessage
+
+        lc_messages: list[SystemMessage | HumanMessage] = []
+        for m in messages:
+            role = m.get("role", "user")
+            content = m.get("content", "")
+            if role == "system":
+                lc_messages.append(SystemMessage(content=content))
+            else:
+                lc_messages.append(HumanMessage(content=content))
+
+        structured_model = self._model.with_structured_output(response_model)
+        return structured_model.invoke(lc_messages)  # type: ignore[return-value]
 
     def count_tokens(self, text: str) -> int:
         """Return an approximate token count for the given text."""
