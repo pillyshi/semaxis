@@ -96,9 +96,11 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
             raise ValueError(
                 f"sample_method must be one of {_SAMPLE_METHODS}, got {self.sample_method!r}"
             )
-        if self.context_limit <= _PROMPT_OVERHEAD:
+        if self.n_synthesized < 1:
+            raise ValueError(f"n_synthesized must be >= 1, got {self.n_synthesized}")
+        if (self.context_limit - _PROMPT_OVERHEAD) // 2 < 1:
             raise ValueError(
-                f"context_limit ({self.context_limit}) must be greater than {_PROMPT_OVERHEAD}"
+                f"context_limit ({self.context_limit}) leaves no token budget after overhead ({_PROMPT_OVERHEAD})"
             )
 
         y_list = list(y)
@@ -112,9 +114,6 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
                 f"y must contain only binary labels {{0, 1}}, got {label_set - {0, 1}}"
             )
 
-        _llm = LLMClient(self.llm) if isinstance(self.llm, str) else self.llm
-        _rng = random.Random(self.seed)
-
         pos_texts = [t for t, yi in zip(X, y_list) if yi == 1]
         neg_texts = [t for t, yi in zip(X, y_list) if yi == 0]
 
@@ -122,6 +121,9 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
             raise ValueError("y must contain at least one positive (1) sample")
         if not neg_texts:
             raise ValueError("y must contain at least one negative (0) sample")
+
+        _llm = LLMClient(self.llm) if isinstance(self.llm, str) else self.llm
+        _rng = random.Random(self.seed)
 
         budget = (self.context_limit - _PROMPT_OVERHEAD) // 2
         pos_sampled = _sample_group(
@@ -152,7 +154,7 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
             warnings.warn(
                 f"LLM returned {actual} hard positives, expected {self.n_synthesized}",
                 UserWarning,
-                stacklevel=2,
+                stacklevel=3,
             )
 
         generated_texts = [hp.text for hp in self.generation_result_.hard_positives]

@@ -160,6 +160,25 @@ def test_fit_resample_context_limit_too_small_raises():
         sampler.fit_resample(["a", "b"], [1, 0])
 
 
+def test_fit_resample_context_limit_zero_budget_raises():
+    # context_limit=501 passes the old <= 500 guard but yields budget = (501-500)//2 = 0
+    sampler = HardPositiveOverSampler(llm=MagicMock(), context_limit=501)
+    with pytest.raises(ValueError, match="context_limit"):
+        sampler.fit_resample(["a", "b"], [1, 0])
+
+
+def test_fit_resample_n_synthesized_zero_raises():
+    sampler = HardPositiveOverSampler(llm=MagicMock(), n_synthesized=0)
+    with pytest.raises(ValueError, match="n_synthesized"):
+        sampler.fit_resample(["a", "b"], [1, 0])
+
+
+def test_fit_resample_n_synthesized_negative_raises():
+    sampler = HardPositiveOverSampler(llm=MagicMock(), n_synthesized=-5)
+    with pytest.raises(ValueError, match="n_synthesized"):
+        sampler.fit_resample(["a", "b"], [1, 0])
+
+
 def test_fit_resample_validation_error_raises_value_error():
     sampler = HardPositiveOverSampler(llm=MagicMock(), n_synthesized=1)
     llm = MagicMock()
