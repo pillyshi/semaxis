@@ -206,6 +206,10 @@ class SupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMixi
         Returns:
             np.ndarray of shape (n_texts, n_features) with entailment scores in [0, 1].
         """
+        if not self.features_:
+            raise ValueError(
+                "No features were generated during fit(); transform() cannot produce output."
+            )
         columns = [
             self._nli.score(texts, [h] * len(texts))
             for h in self.features_
@@ -221,7 +225,9 @@ class SupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMixi
         check_is_fitted(self, "features_")
         with open(path, "w") as f:
             json.dump({
+                "nli_model": self.nli_model,
                 "classes": self.classes_.tolist(),
+                "classes_dtype": str(self.classes_.dtype),
                 "features": self.features_,
                 "feature_meta": [
                     {
@@ -239,7 +245,7 @@ class SupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMixi
         Args:
             path: Path to the JSON file written by :meth:`save`.
             llm: LLM client or model name string (must be re-supplied; not stored in the file).
-            **kwargs: Additional init parameters (e.g. ``nli_model``, ``n_features``).
+            **kwargs: Additional init parameters (e.g. ``n_features``, ``strategy``).
 
         Returns:
             A fitted :class:`SupervisedTransformer` instance ready for :meth:`transform`.
@@ -247,7 +253,8 @@ class SupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMixi
         with open(path) as f:
             data = json.load(f)
         obj = cls(llm=llm, **kwargs)
-        obj.classes_ = np.array(data["classes"])
+        obj.nli_model = data["nli_model"]
+        obj.classes_ = np.array(data["classes"], dtype=data["classes_dtype"])
         obj.features_ = data["features"]
         obj.feature_meta_ = [FeatureMeta(**m) for m in data["feature_meta"]]
         obj._nli = NLIModel(obj.nli_model)

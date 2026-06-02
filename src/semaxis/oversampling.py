@@ -232,7 +232,7 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
         Args:
             path: Destination file path.
         """
-        if not hasattr(self, "generation_result_"):
+        if not hasattr(self, "generation_result_") or self.generation_result_ is None:
             from sklearn.exceptions import NotFittedError
             raise NotFittedError(
                 "This HardPositiveOverSampler instance is not fitted yet. "

@@ -148,6 +148,10 @@ class UnsupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMi
         Returns:
             np.ndarray of shape (n_texts, n_features) with entailment scores in [0, 1].
         """
+        if not self.features_:
+            raise ValueError(
+                "No features were generated during fit(); transform() cannot produce output."
+            )
         columns = [
             self._nli.score(texts, [h] * len(texts))
             for h in self.features_
@@ -162,7 +166,7 @@ class UnsupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMi
         """
         check_is_fitted(self, "features_")
         with open(path, "w") as f:
-            json.dump({"features": self.features_}, f)
+            json.dump({"nli_model": self.nli_model, "features": self.features_}, f)
 
     @classmethod
     def load(cls, path: str | os.PathLike, llm: BaseLLMClient | str, **kwargs: Any) -> "UnsupervisedTransformer":
@@ -171,7 +175,7 @@ class UnsupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMi
         Args:
             path: Path to the JSON file written by :meth:`save`.
             llm: LLM client or model name string (must be re-supplied; not stored in the file).
-            **kwargs: Additional init parameters (e.g. ``nli_model``, ``n_features``).
+            **kwargs: Additional init parameters (e.g. ``n_features``).
 
         Returns:
             A fitted :class:`UnsupervisedTransformer` instance ready for :meth:`transform`.
@@ -179,6 +183,7 @@ class UnsupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMi
         with open(path) as f:
             data = json.load(f)
         obj = cls(llm=llm, **kwargs)
+        obj.nli_model = data["nli_model"]
         obj.features_ = data["features"]
         obj._nli = NLIModel(obj.nli_model)
         return obj

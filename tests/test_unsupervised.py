@@ -251,8 +251,31 @@ def test_save_load_roundtrip(tmp_path):
 
     nli2 = _make_nli(0.8)
     with patch("semaxis.unsupervised.NLIModel", return_value=nli2):
-        loaded = UnsupervisedTransformer.load(path, llm=MagicMock(), nli_model="m")
+        loaded = UnsupervisedTransformer.load(path, llm=MagicMock())
 
     assert loaded.features_ == t.features_
+    assert loaded.nli_model == t.nli_model
     texts = ["text a", "text b"]
     np.testing.assert_array_equal(t.transform(texts), loaded.transform(texts))
+
+
+def test_save_load_restores_nli_model_name(tmp_path):
+    t = UnsupervisedTransformer(llm=MagicMock(), nli_model="custom-nli", n_features=2)
+    nli = _make_nli()
+    _fit(t, _make_llm(2), nli)
+
+    path = tmp_path / "model.json"
+    t.save(path)
+
+    with patch("semaxis.unsupervised.NLIModel") as MockNLI:
+        MockNLI.return_value = _make_nli()
+        UnsupervisedTransformer.load(path, llm=MagicMock())
+    MockNLI.assert_called_once_with("custom-nli")
+
+
+def test_transform_empty_features_raises():
+    t = UnsupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=0)
+    nli = _make_nli()
+    _fit(t, _make_llm(0), nli)
+    with pytest.raises(ValueError, match="No features"):
+        t.transform(["text"])

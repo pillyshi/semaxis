@@ -353,10 +353,48 @@ def test_save_load_roundtrip(tmp_path):
 
     nli2 = _make_nli(0.7)
     with patch("semaxis.supervised.NLIModel", return_value=nli2):
-        loaded = SupervisedTransformer.load(path, llm=MagicMock(), nli_model="m")
+        loaded = SupervisedTransformer.load(path, llm=MagicMock())
 
     assert loaded.features_ == t.features_
+    assert loaded.nli_model == t.nli_model
     np.testing.assert_array_equal(loaded.classes_, t.classes_)
+    assert loaded.classes_.dtype == t.classes_.dtype
     assert loaded.feature_meta_ == t.feature_meta_
     texts = ["text a", "text b"]
     np.testing.assert_array_equal(t.transform(texts), loaded.transform(texts))
+
+
+def test_save_load_restores_nli_model_name(tmp_path):
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="custom-nli", n_features=2)
+    nli = _make_nli()
+    _fit_binary(t, _make_llm(2), nli)
+
+    path = tmp_path / "model.json"
+    t.save(path)
+
+    with patch("semaxis.supervised.NLIModel") as MockNLI:
+        MockNLI.return_value = _make_nli()
+        SupervisedTransformer.load(path, llm=MagicMock())
+    MockNLI.assert_called_once_with("custom-nli")
+
+
+def test_save_load_preserves_classes_dtype(tmp_path):
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
+    nli = _make_nli()
+    _fit_binary(t, _make_llm(2), nli)
+
+    path = tmp_path / "model.json"
+    t.save(path)
+
+    with patch("semaxis.supervised.NLIModel", return_value=_make_nli()):
+        loaded = SupervisedTransformer.load(path, llm=MagicMock())
+    assert loaded.classes_.dtype == t.classes_.dtype
+
+
+def test_transform_empty_features_raises():
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=0)
+    llm = _make_llm(0)
+    nli = _make_nli()
+    _fit_binary(t, llm, nli)
+    with pytest.raises(ValueError, match="No features"):
+        t.transform(["text"])
