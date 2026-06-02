@@ -391,6 +391,12 @@ def test_save_load_preserves_classes_dtype(tmp_path):
     assert loaded.classes_.dtype == t.classes_.dtype
 
 
+def test_transform_before_fit_raises_not_fitted_error():
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m")
+    with pytest.raises(NotFittedError):
+        t.transform(["text"])
+
+
 def test_transform_empty_features_raises():
     t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=0)
     llm = _make_llm(0)

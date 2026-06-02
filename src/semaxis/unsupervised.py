@@ -148,6 +148,7 @@ class UnsupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMi
         Returns:
             np.ndarray of shape (n_texts, n_features) with entailment scores in [0, 1].
         """
+        check_is_fitted(self, "features_")
         if not self.features_:
             raise ValueError(
                 "No features were generated during fit(); transform() cannot produce output."

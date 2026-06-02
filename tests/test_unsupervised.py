@@ -273,6 +273,12 @@ def test_save_load_restores_nli_model_name(tmp_path):
     MockNLI.assert_called_once_with("custom-nli")
 
 
+def test_transform_before_fit_raises_not_fitted_error():
+    t = UnsupervisedTransformer(llm=MagicMock(), nli_model="m")
+    with pytest.raises(NotFittedError):
+        t.transform(["text"])
+
+
 def test_transform_empty_features_raises():
     t = UnsupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=0)
     nli = _make_nli()
