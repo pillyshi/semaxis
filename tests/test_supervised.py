@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 from sklearn.base import clone
+from sklearn.exceptions import NotFittedError
 
 from semaxis import SupervisedTransformer
 
@@ -330,3 +331,32 @@ def test_sample_method_kmeans_calls_sentence_transformer():
         t.llm = llm
         t.fit(texts, labels)
         assert MockST.called
+
+
+# ---------------------------------------------------------------------------
+# save / load
+# ---------------------------------------------------------------------------
+
+def test_save_before_fit_raises(tmp_path):
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m")
+    with pytest.raises(NotFittedError):
+        t.save(tmp_path / "model.json")
+
+
+def test_save_load_roundtrip(tmp_path):
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
+    nli = _make_nli(0.7)
+    _fit_binary(t, _make_llm(2), nli)
+
+    path = tmp_path / "model.json"
+    t.save(path)
+
+    nli2 = _make_nli(0.7)
+    with patch("semaxis.supervised.NLIModel", return_value=nli2):
+        loaded = SupervisedTransformer.load(path, llm=MagicMock(), nli_model="m")
+
+    assert loaded.features_ == t.features_
+    np.testing.assert_array_equal(loaded.classes_, t.classes_)
+    assert loaded.feature_meta_ == t.feature_meta_
+    texts = ["text a", "text b"]
+    np.testing.assert_array_equal(t.transform(texts), loaded.transform(texts))

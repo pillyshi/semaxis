@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import os
 import random
 from typing import Any, Self
 
@@ -7,6 +9,7 @@ from ._base import _LLMTransformerMixin
 
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.utils.validation import check_is_fitted
 
 from .llm import BaseLLMClient, LLMClient
 from .nli import NLIModel
@@ -150,3 +153,32 @@ class UnsupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMi
             for h in self.features_
         ]
         return np.column_stack(columns)
+
+    def save(self, path: str | os.PathLike) -> None:
+        """Save fitted state to a JSON file.
+
+        Args:
+            path: Destination file path.
+        """
+        check_is_fitted(self, "features_")
+        with open(path, "w") as f:
+            json.dump({"features": self.features_}, f)
+
+    @classmethod
+    def load(cls, path: str | os.PathLike, llm: BaseLLMClient | str, **kwargs: Any) -> "UnsupervisedTransformer":
+        """Load fitted state from a JSON file.
+
+        Args:
+            path: Path to the JSON file written by :meth:`save`.
+            llm: LLM client or model name string (must be re-supplied; not stored in the file).
+            **kwargs: Additional init parameters (e.g. ``nli_model``, ``n_features``).
+
+        Returns:
+            A fitted :class:`UnsupervisedTransformer` instance ready for :meth:`transform`.
+        """
+        with open(path) as f:
+            data = json.load(f)
+        obj = cls(llm=llm, **kwargs)
+        obj.features_ = data["features"]
+        obj._nli = NLIModel(obj.nli_model)
+        return obj
