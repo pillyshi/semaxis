@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import os
 import random
 from itertools import combinations
 from typing import Any, NamedTuple, Self
@@ -9,6 +11,7 @@ from ._base import _LLMTransformerMixin
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import LabelEncoder
+from sklearn.utils.validation import check_is_fitted
 
 from .llm import BaseLLMClient, LLMClient
 from .nli import NLIModel
@@ -203,8 +206,57 @@ class SupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMixi
         Returns:
             np.ndarray of shape (n_texts, n_features) with entailment scores in [0, 1].
         """
+        check_is_fitted(self, "features_")
+        if not self.features_:
+            raise ValueError(
+                "No features were generated during fit(); transform() cannot produce output."
+            )
         columns = [
             self._nli.score(texts, [h] * len(texts))
             for h in self.features_
         ]
         return np.column_stack(columns)
+
+    def save(self, path: str | os.PathLike) -> None:
+        """Save fitted state to a JSON file.
+
+        Args:
+            path: Destination file path.
+        """
+        check_is_fitted(self, "features_")
+        with open(path, "w") as f:
+            json.dump({
+                "nli_model": self.nli_model,
+                "classes": self.classes_.tolist(),
+                "classes_dtype": str(self.classes_.dtype),
+                "features": self.features_,
+                "feature_meta": [
+                    {
+                        "positive": m.positive.item() if hasattr(m.positive, "item") else m.positive,
+                        "negative": m.negative.item() if hasattr(m.negative, "item") else m.negative,
+                    }
+                    for m in self.feature_meta_
+                ],
+            }, f)
+
+    @classmethod
+    def load(cls, path: str | os.PathLike, llm: BaseLLMClient | str, **kwargs: Any) -> "SupervisedTransformer":
+        """Load fitted state from a JSON file.
+
+        Args:
+            path: Path to the JSON file written by :meth:`save`.
+            llm: LLM client or model name string (must be re-supplied; not stored in the file).
+            **kwargs: Additional init parameters (e.g. ``n_features``, ``strategy``).
+
+        Returns:
+            A fitted :class:`SupervisedTransformer` instance ready for :meth:`transform`.
+        """
+        with open(path) as f:
+            data = json.load(f)
+        obj = cls(llm=llm, **kwargs)
+        obj.nli_model = data["nli_model"]
+        obj.classes_ = np.array(data["classes"], dtype=data["classes_dtype"])
+        obj.features_ = data["features"]
+        obj.feature_meta_ = [FeatureMeta(**m) for m in data["feature_meta"]]
+        obj._nli = NLIModel(obj.nli_model)
+        return obj

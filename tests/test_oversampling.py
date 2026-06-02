@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from sklearn.base import clone
+from sklearn.exceptions import NotFittedError
 
 from semaxis import (
     BoundaryFeature,
@@ -470,3 +471,25 @@ def test_sklearn_clone_with_string_llm():
     sampler = HardPositiveOverSampler(llm="gpt-4o")
     cloned = clone(sampler)
     assert cloned.llm == "gpt-4o"
+
+
+# ---------------------------------------------------------------------------
+# save / load
+# ---------------------------------------------------------------------------
+
+def test_save_before_fit_raises(tmp_path):
+    sampler = HardPositiveOverSampler(llm=MagicMock())
+    with pytest.raises(NotFittedError):
+        sampler.save(tmp_path / "sampler.json")
+
+
+def test_save_load_roundtrip(tmp_path):
+    sampler = HardPositiveOverSampler(llm=MagicMock(), n_synthesized=1)
+    llm = _make_llm(n_hard_positives=1)
+    _fit_resample(sampler, llm)
+
+    path = tmp_path / "sampler.json"
+    sampler.save(path)
+
+    loaded = HardPositiveOverSampler.load(path, llm=MagicMock())
+    assert loaded.generation_result_ == sampler.generation_result_

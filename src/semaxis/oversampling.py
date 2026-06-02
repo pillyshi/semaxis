@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import os
 import random
 import warnings
 from math import ceil
@@ -223,6 +225,39 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
         X_aug = list(X) + generated_texts
         y_aug = y_list + [1] * len(generated_texts)
         return X_aug, y_aug
+
+    def save(self, path: str | os.PathLike) -> None:
+        """Save fitted state to a JSON file.
+
+        Args:
+            path: Destination file path.
+        """
+        if not hasattr(self, "generation_result_") or self.generation_result_ is None:
+            from sklearn.exceptions import NotFittedError
+            raise NotFittedError(
+                "This HardPositiveOverSampler instance is not fitted yet. "
+                "Call 'fit_resample' before using this method."
+            )
+        with open(path, "w") as f:
+            json.dump(self.generation_result_.model_dump(), f)
+
+    @classmethod
+    def load(cls, path: str | os.PathLike, llm: BaseLLMClient | str, **kwargs: Any) -> "HardPositiveOverSampler":
+        """Load fitted state from a JSON file.
+
+        Args:
+            path: Path to the JSON file written by :meth:`save`.
+            llm: LLM client or model name string (must be re-supplied; not stored in the file).
+            **kwargs: Additional init parameters (e.g. ``n_synthesized``, ``batch_size``).
+
+        Returns:
+            A fitted :class:`HardPositiveOverSampler` instance with restored generation results.
+        """
+        with open(path) as f:
+            data = json.load(f)
+        obj = cls(llm=llm, **kwargs)
+        obj.generation_result_ = HardPositiveGenerationResult.model_validate(data)
+        return obj
 
     def _sample_prompt_examples(
         self,

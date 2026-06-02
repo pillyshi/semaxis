@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 from sklearn.base import clone
+from sklearn.exceptions import NotFittedError
 
 from semaxis import UnsupervisedTransformer
 
@@ -228,3 +229,59 @@ def test_sample_method_kmeans_calls_sentence_transformer():
         t.llm = llm
         t.fit(["text 1", "text 2", "text 3"])
         assert MockST.called
+
+
+# ---------------------------------------------------------------------------
+# save / load
+# ---------------------------------------------------------------------------
+
+def test_save_before_fit_raises(tmp_path):
+    t = UnsupervisedTransformer(llm=MagicMock(), nli_model="m")
+    with pytest.raises(NotFittedError):
+        t.save(tmp_path / "model.json")
+
+
+def test_save_load_roundtrip(tmp_path):
+    t = UnsupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=3)
+    nli = _make_nli(0.8)
+    _fit(t, _make_llm(3), nli)
+
+    path = tmp_path / "model.json"
+    t.save(path)
+
+    nli2 = _make_nli(0.8)
+    with patch("semaxis.unsupervised.NLIModel", return_value=nli2):
+        loaded = UnsupervisedTransformer.load(path, llm=MagicMock())
+
+    assert loaded.features_ == t.features_
+    assert loaded.nli_model == t.nli_model
+    texts = ["text a", "text b"]
+    np.testing.assert_array_equal(t.transform(texts), loaded.transform(texts))
+
+
+def test_save_load_restores_nli_model_name(tmp_path):
+    t = UnsupervisedTransformer(llm=MagicMock(), nli_model="custom-nli", n_features=2)
+    nli = _make_nli()
+    _fit(t, _make_llm(2), nli)
+
+    path = tmp_path / "model.json"
+    t.save(path)
+
+    with patch("semaxis.unsupervised.NLIModel") as MockNLI:
+        MockNLI.return_value = _make_nli()
+        UnsupervisedTransformer.load(path, llm=MagicMock())
+    MockNLI.assert_called_once_with("custom-nli")
+
+
+def test_transform_before_fit_raises_not_fitted_error():
+    t = UnsupervisedTransformer(llm=MagicMock(), nli_model="m")
+    with pytest.raises(NotFittedError):
+        t.transform(["text"])
+
+
+def test_transform_empty_features_raises():
+    t = UnsupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=0)
+    nli = _make_nli()
+    _fit(t, _make_llm(0), nli)
+    with pytest.raises(ValueError, match="No features"):
+        t.transform(["text"])
