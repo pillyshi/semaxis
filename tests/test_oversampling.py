@@ -1,4 +1,5 @@
 """Unit tests for HardPositiveOverSampler."""
+import logging
 import threading
 from unittest.mock import MagicMock, patch
 
@@ -461,6 +462,7 @@ def test_sklearn_clone_with_llm_client_instance():
 
 def test_sklearn_clone_preserves_params():
     llm = MagicMock()
+    logger = MagicMock(spec=logging.Logger)
     sampler = HardPositiveOverSampler(
         llm=llm,
         n_synthesized=20,
@@ -468,6 +470,8 @@ def test_sklearn_clone_preserves_params():
         seed=42,
         sample_method="kmeans",
         embedding_model="my-embed",
+        verbose=True,
+        logger=logger,
     )
     cloned = clone(sampler)
     assert cloned.get_params(deep=False) == sampler.get_params(deep=False)
@@ -499,3 +503,86 @@ def test_save_load_roundtrip(tmp_path):
 
     loaded = HardPositiveOverSampler.load(path, llm=MagicMock())
     assert loaded.generation_result_ == sampler.generation_result_
+
+
+# ---------------------------------------------------------------------------
+# verbose parameter
+# ---------------------------------------------------------------------------
+
+def test_verbose_default_false():
+    sampler = HardPositiveOverSampler(llm=MagicMock())
+    assert sampler.verbose is False
+
+
+def test_verbose_true_updates_progress_bar():
+    sampler = HardPositiveOverSampler(llm=MagicMock(), n_synthesized=2, verbose=True)
+    llm = _make_llm(n_hard_positives=2)
+    mock_pbar = MagicMock()
+    mock_tqdm_cls = MagicMock(return_value=mock_pbar)
+    with patch.dict("sys.modules", {"tqdm": MagicMock(), "tqdm.auto": MagicMock(tqdm=mock_tqdm_cls)}):
+        sampler.llm = llm
+        sampler.fit_resample(["pos A", "pos B", "neg C", "neg D"], [1, 1, 0, 0])
+    mock_tqdm_cls.assert_called_once_with(total=2, desc="Generating hard positives")
+    assert mock_pbar.update.call_count == 2
+    assert all(call.args == (1,) for call in mock_pbar.update.call_args_list)
+    mock_pbar.close.assert_called_once()
+
+
+def test_verbose_true_closes_pbar_on_exception():
+    sampler = HardPositiveOverSampler(llm=MagicMock(), n_synthesized=1, verbose=True)
+    llm = MagicMock()
+    llm.count_tokens.return_value = 1
+    llm.complete_structured.side_effect = RuntimeError("boom")
+    mock_pbar = MagicMock()
+    mock_tqdm_cls = MagicMock(return_value=mock_pbar)
+    with patch.dict("sys.modules", {"tqdm": MagicMock(), "tqdm.auto": MagicMock(tqdm=mock_tqdm_cls)}):
+        sampler.llm = llm
+        with pytest.warns(UserWarning):
+            sampler.fit_resample(["pos A", "neg B"], [1, 0])
+    mock_pbar.close.assert_called_once()
+
+
+def test_verbose_true_without_tqdm_raises():
+    sampler = HardPositiveOverSampler(llm=MagicMock(), n_synthesized=1, verbose=True)
+    llm = _make_llm(n_hard_positives=1)
+    sampler.llm = llm
+    with patch.dict("sys.modules", {"tqdm": None, "tqdm.auto": None}):
+        with pytest.raises(ImportError, match="tqdm is required when verbose=True"):
+            sampler.fit_resample(["pos A", "neg B"], [1, 0])
+    assert not hasattr(sampler, "generation_result_"), (
+        "generation_result_ must not be set when fit_resample raises before completing"
+    )
+
+
+# ---------------------------------------------------------------------------
+# logger parameter
+# ---------------------------------------------------------------------------
+
+def test_logger_default_none():
+    sampler = HardPositiveOverSampler(llm=MagicMock())
+    assert sampler.logger is None
+
+
+def test_logger_none_no_error():
+    sampler = HardPositiveOverSampler(llm=MagicMock(), n_synthesized=1, logger=None)
+    llm = _make_llm(n_hard_positives=1)
+    X_aug, _ = _fit_resample(sampler, llm)
+    assert "gen 0" in X_aug
+
+
+def test_logger_receives_debug_messages():
+    logger = MagicMock(spec=logging.Logger)
+    logger.isEnabledFor.return_value = True
+    sampler = HardPositiveOverSampler(llm=MagicMock(), n_synthesized=2, logger=logger)
+    llm = _make_llm(n_hard_positives=2)
+    _fit_resample(sampler, llm)
+    assert logger.debug.call_count >= 1
+
+
+def test_logger_debug_suppressed_when_level_above_debug():
+    logger = MagicMock(spec=logging.Logger)
+    logger.isEnabledFor.return_value = False
+    sampler = HardPositiveOverSampler(llm=MagicMock(), n_synthesized=1, logger=logger)
+    llm = _make_llm(n_hard_positives=1)
+    _fit_resample(sampler, llm)
+    logger.debug.assert_not_called()
