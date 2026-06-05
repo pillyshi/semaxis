@@ -235,7 +235,8 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
                 self.generation_result_.positive_features.extend(result.positive_features)
                 self.generation_result_.negative_features.extend(result.negative_features)
                 self.generation_result_.boundary_features.extend(result.boundary_features)
-                if self.logger is not None and self.logger.isEnabledFor(logging.DEBUG):
+                debug_log = self.logger is not None and self.logger.isEnabledFor(logging.DEBUG)
+                if debug_log:
                     n_before = len(self.generation_result_.hard_positives)
                 for hp in result.hard_positives:
                     if len(self.generation_result_.hard_positives) >= target_count:
@@ -244,8 +245,8 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
                         self.generation_result_.hard_positives.append(hp)
                         if pbar is not None:
                             pbar.update(1)
-                if self.logger is not None and self.logger.isEnabledFor(logging.DEBUG):
-                    self.logger.debug(
+                if debug_log:
+                    self.logger.debug(  # type: ignore[union-attr]
                         "Batch %d/%d: accepted %d new sample(s) (%d/%d total)",
                         batch_idx + 1, max_batches,
                         len(self.generation_result_.hard_positives) - n_before,  # type: ignore[possibly-undefined]

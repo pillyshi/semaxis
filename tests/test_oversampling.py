@@ -516,8 +516,6 @@ def test_verbose_true_updates_progress_bar():
     llm = _make_llm(n_hard_positives=2)
     mock_pbar = MagicMock()
     mock_tqdm_cls = MagicMock(return_value=mock_pbar)
-    with patch("semaxis.oversampling.HardPositiveOverSampler.fit_resample.__wrapped__", create=True):
-        pass
     with patch.dict("sys.modules", {"tqdm": MagicMock(), "tqdm.auto": MagicMock(tqdm=mock_tqdm_cls)}):
         sampler.llm = llm
         sampler.fit_resample(["pos A", "pos B", "neg C", "neg D"], [1, 1, 0, 0])
@@ -567,7 +565,17 @@ def test_logger_none_no_error():
 
 def test_logger_receives_debug_messages():
     logger = MagicMock(spec=logging.Logger)
+    logger.isEnabledFor.return_value = True
     sampler = HardPositiveOverSampler(llm=MagicMock(), n_synthesized=2, logger=logger)
     llm = _make_llm(n_hard_positives=2)
     _fit_resample(sampler, llm)
     assert logger.debug.call_count >= 1
+
+
+def test_logger_debug_suppressed_when_level_above_debug():
+    logger = MagicMock(spec=logging.Logger)
+    logger.isEnabledFor.return_value = False
+    sampler = HardPositiveOverSampler(llm=MagicMock(), n_synthesized=1, logger=logger)
+    llm = _make_llm(n_hard_positives=1)
+    _fit_resample(sampler, llm)
+    logger.debug.assert_not_called()
