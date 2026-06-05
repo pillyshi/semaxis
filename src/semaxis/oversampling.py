@@ -163,6 +163,7 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
         max_batches = max(target_count, ceil(target_count / self.batch_size) * 3)
         warned_empty_pos = False
         warned_empty_neg = False
+        warned_exception = False
 
         for _ in range(max_batches):
             remaining = target_count - len(self.generation_result_.hard_positives)
@@ -205,12 +206,14 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
             ]
             try:
                 result = _llm.complete_structured(messages, HardPositiveGenerationResult)
-            except Exception as e:
-                warnings.warn(
-                    f"Skipping batch due to error: {e}",
-                    UserWarning,
-                    stacklevel=2,
-                )
+            except (ValueError, RuntimeError, OSError) as e:
+                if not warned_exception:
+                    warnings.warn(
+                        f"Skipping batch due to error: {e}",
+                        UserWarning,
+                        stacklevel=2,
+                    )
+                    warned_exception = True
                 continue
             self.generation_result_.positive_features.extend(result.positive_features)
             self.generation_result_.negative_features.extend(result.negative_features)
