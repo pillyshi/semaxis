@@ -117,6 +117,68 @@ for coef, hyp in sorted(zip(clf.coef_[0], vect.features_), key=lambda x: abs(x[0
 
 ---
 
+## Hard Positive Oversampling
+
+`HardPositiveOverSampler` generates synthetic positive-class texts that are semantically valid but superficially ambiguous — texts that experts would label positive but shallow classifiers might not.
+
+It implements the imbalanced-learn `fit_resample(X, y)` interface for raw text arrays. Only binary labels (`0`/`1`) are supported.
+
+```python
+from semaxis import HardPositiveOverSampler
+
+sampler = HardPositiveOverSampler(llm="gpt-4o", n_synthesized=20)
+X_aug, y_aug = sampler.fit_resample(texts, labels)
+```
+
+By default (`n_synthesized=None`) it generates enough samples to balance the classes.
+
+### Inspecting generated samples
+
+After `fit_resample`, `generation_result_` exposes the full LLM analysis:
+
+```python
+for hp in sampler.generation_result_.hard_positives:
+    print(hp.text)
+    print("  evidence:", hp.positive_evidence)
+    print("  confusing:", hp.confusing_evidence)
+```
+
+### Saving and loading
+
+```python
+sampler.save("hard_positives.json")
+
+sampler2 = HardPositiveOverSampler.load("hard_positives.json", llm="gpt-4o")
+```
+
+### Logging progress
+
+```python
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger("semaxis")
+
+sampler = HardPositiveOverSampler(
+    llm="gpt-4o",
+    n_synthesized=20,
+    verbose=True,   # tqdm progress bar
+    logger=logger,  # per-batch debug logging
+)
+```
+
+### Key parameters
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `n_synthesized` | `None` | Number of hard positives to generate. `None` balances the classes. |
+| `batch_size` | `3` | Samples requested per LLM call. |
+| `language` | `None` | Constrain generated texts to a specific language. |
+| `deduplicate` | `True` | Reject generated texts that duplicate existing ones. |
+| `seed` | `None` | Random seed for reproducible example sampling. |
+
+---
+
 ## Custom LLM
 
 Any [LangChain](https://python.langchain.com/)-compatible model works via `LangChainLLMClient`:
