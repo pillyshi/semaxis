@@ -462,6 +462,7 @@ def test_sklearn_clone_with_llm_client_instance():
 
 def test_sklearn_clone_preserves_params():
     llm = MagicMock()
+    logger = MagicMock(spec=logging.Logger)
     sampler = HardPositiveOverSampler(
         llm=llm,
         n_synthesized=20,
@@ -469,6 +470,8 @@ def test_sklearn_clone_preserves_params():
         seed=42,
         sample_method="kmeans",
         embedding_model="my-embed",
+        verbose=True,
+        logger=logger,
     )
     cloned = clone(sampler)
     assert cloned.get_params(deep=False) == sampler.get_params(deep=False)
