@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import random
 import warnings
@@ -76,6 +77,8 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
         seed: int | None = None,
         sample_method: str = "random",
         embedding_model: str = "paraphrase-albert-small-v2",
+        verbose: bool = False,
+        logger: logging.Logger | None = None,
     ) -> None:
         self.llm = llm
         self.n_synthesized = n_synthesized
@@ -87,6 +90,8 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
         self.seed = seed
         self.sample_method = sample_method
         self.embedding_model = embedding_model
+        self.verbose = verbose
+        self.logger = logger
 
     def fit_resample(
         self,
@@ -165,64 +170,97 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
         warned_empty_neg = False
         warned_exception = False
 
-        for _ in range(max_batches):
-            remaining = target_count - len(self.generation_result_.hard_positives)
-            if remaining <= 0:
-                break
-
-            pos_sampled = self._sample_prompt_examples(
-                pos_texts, budget, _llm.count_tokens, _rng
-            )
-            neg_sampled = self._sample_prompt_examples(
-                neg_texts, budget, _llm.count_tokens, _rng
-            )
-
-            if not pos_sampled and not warned_empty_pos:
-                warnings.warn(
-                    "All positive texts exceed the per-group token budget; "
-                    "the LLM will receive no positive examples.",
-                    UserWarning,
-                    stacklevel=2,
-                )
-                warned_empty_pos = True
-            if not neg_sampled and not warned_empty_neg:
-                warnings.warn(
-                    "All negative texts exceed the per-group token budget; "
-                    "the LLM will receive no negative examples.",
-                    UserWarning,
-                    stacklevel=2,
-                )
-                warned_empty_neg = True
-
-            batch_count = min(self.batch_size, remaining)
-            messages = [
-                {"role": "system", "content": prompts.SYSTEM},
-                {"role": "user", "content": prompts.build_user_message(
-                    pos_texts=pos_sampled,
-                    neg_texts=neg_sampled,
-                    n_synthesized=batch_count,
-                    language=self.language,
-                )},
-            ]
+        if self.verbose:
             try:
-                result = _llm.complete_structured(messages, HardPositiveGenerationResult)
-            except Exception as e:
-                if not warned_exception:
+                from tqdm.auto import tqdm as _tqdm
+            except ImportError:
+                raise ImportError(
+                    "tqdm is required when verbose=True. "
+                    "Install it with: pip install tqdm"
+                )
+            pbar = _tqdm(total=target_count, desc="Generating hard positives")
+        else:
+            pbar = None
+
+        try:
+            for batch_idx, _ in enumerate(range(max_batches)):
+                remaining = target_count - len(self.generation_result_.hard_positives)
+                if remaining <= 0:
+                    break
+
+                pos_sampled = self._sample_prompt_examples(
+                    pos_texts, budget, _llm.count_tokens, _rng
+                )
+                neg_sampled = self._sample_prompt_examples(
+                    neg_texts, budget, _llm.count_tokens, _rng
+                )
+
+                if not pos_sampled and not warned_empty_pos:
                     warnings.warn(
-                        f"Skipping batch due to {type(e).__name__}: {e}",
+                        "All positive texts exceed the per-group token budget; "
+                        "the LLM will receive no positive examples.",
                         UserWarning,
                         stacklevel=2,
                     )
-                    warned_exception = True
-                continue
-            self.generation_result_.positive_features.extend(result.positive_features)
-            self.generation_result_.negative_features.extend(result.negative_features)
-            self.generation_result_.boundary_features.extend(result.boundary_features)
-            for hp in result.hard_positives:
-                if len(self.generation_result_.hard_positives) >= target_count:
-                    break
-                if self._accept_generated_text(hp.text, original_texts, accepted_texts):
-                    self.generation_result_.hard_positives.append(hp)
+                    warned_empty_pos = True
+                if not neg_sampled and not warned_empty_neg:
+                    warnings.warn(
+                        "All negative texts exceed the per-group token budget; "
+                        "the LLM will receive no negative examples.",
+                        UserWarning,
+                        stacklevel=2,
+                    )
+                    warned_empty_neg = True
+
+                if self.logger is not None:
+                    self.logger.debug(
+                        "Batch %d/%d — accepted %d/%d",
+                        batch_idx + 1, max_batches,
+                        len(self.generation_result_.hard_positives), target_count,
+                    )
+
+                batch_count = min(self.batch_size, remaining)
+                messages = [
+                    {"role": "system", "content": prompts.SYSTEM},
+                    {"role": "user", "content": prompts.build_user_message(
+                        pos_texts=pos_sampled,
+                        neg_texts=neg_sampled,
+                        n_synthesized=batch_count,
+                        language=self.language,
+                    )},
+                ]
+                try:
+                    result = _llm.complete_structured(messages, HardPositiveGenerationResult)
+                except Exception as e:
+                    if not warned_exception:
+                        warnings.warn(
+                            f"Skipping batch due to {type(e).__name__}: {e}",
+                            UserWarning,
+                            stacklevel=2,
+                        )
+                        warned_exception = True
+                    continue
+                self.generation_result_.positive_features.extend(result.positive_features)
+                self.generation_result_.negative_features.extend(result.negative_features)
+                self.generation_result_.boundary_features.extend(result.boundary_features)
+                n_before = len(self.generation_result_.hard_positives)
+                for hp in result.hard_positives:
+                    if len(self.generation_result_.hard_positives) >= target_count:
+                        break
+                    if self._accept_generated_text(hp.text, original_texts, accepted_texts):
+                        self.generation_result_.hard_positives.append(hp)
+                        if pbar is not None:
+                            pbar.update(1)
+                if self.logger is not None:
+                    n_accepted = len(self.generation_result_.hard_positives) - n_before
+                    self.logger.debug(
+                        "Batch %d/%d: accepted %d new sample(s) (%d/%d total)",
+                        batch_idx + 1, max_batches, n_accepted,
+                        len(self.generation_result_.hard_positives), target_count,
+                    )
+        finally:
+            if pbar is not None:
+                pbar.close()
 
         actual = len(self.generation_result_.hard_positives)
         if actual != target_count:

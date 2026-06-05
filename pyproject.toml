@@ -33,6 +33,12 @@ optional = true
 langchain-core = ">=0.3"
 langchain-ollama = ">=0.3"
 
+[tool.poetry.group.progress]
+optional = true
+
+[tool.poetry.group.progress.dependencies]
+tqdm = ">=4.0"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
@@ -41,5 +47,5 @@ build-backend = "poetry.core.masonry.api"
 python_version = "3.11"
 
 [[tool.mypy.overrides]]
-module = ["sklearn.*", "sentence_transformers.*"]
+module = ["sklearn.*", "sentence_transformers.*", "tqdm.*"]
 ignore_missing_imports = true
