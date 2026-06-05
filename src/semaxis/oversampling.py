@@ -257,11 +257,10 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
                         if pbar is not None:
                             pbar.update(1)
                 if debug_log:
+                    n_accepted = len(self.generation_result_.hard_positives) - n_before
+                    n_total = len(self.generation_result_.hard_positives)
                     self.logger.debug(  # type: ignore[union-attr]
-                        "Batch {}/{}: accepted {} new sample(s) ({}/{} total)",
-                        batch_idx + 1, max_batches,
-                        len(self.generation_result_.hard_positives) - n_before,
-                        len(self.generation_result_.hard_positives), target_count,
+                        f"Batch {batch_idx + 1}/{max_batches}: accepted {n_accepted} new sample(s) ({n_total}/{target_count} total)"
                     )
         finally:
             if pbar is not None:
