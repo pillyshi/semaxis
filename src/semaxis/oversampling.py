@@ -148,6 +148,15 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
         _llm = LLMClient(self.llm) if isinstance(self.llm, str) else self.llm
         _rng = random.Random(self.seed)
 
+        if self.verbose:
+            try:
+                from tqdm.auto import tqdm as _tqdm
+            except ImportError:
+                raise ImportError(
+                    "tqdm is required when verbose=True. "
+                    "Install it with: pip install tqdm"
+                )
+
         target_count = (
             max(0, len(neg_texts) - len(pos_texts))
             if self.n_synthesized is None
@@ -170,20 +179,10 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
         warned_empty_neg = False
         warned_exception = False
 
-        if self.verbose:
-            try:
-                from tqdm.auto import tqdm as _tqdm
-            except ImportError:
-                raise ImportError(
-                    "tqdm is required when verbose=True. "
-                    "Install it with: pip install tqdm"
-                )
-            pbar = _tqdm(total=target_count, desc="Generating hard positives")
-        else:
-            pbar = None
+        pbar = _tqdm(total=target_count, desc="Generating hard positives") if self.verbose else None  # type: ignore[possibly-undefined]
 
         try:
-            for batch_idx, _ in enumerate(range(max_batches)):
+            for batch_idx in range(max_batches):
                 remaining = target_count - len(self.generation_result_.hard_positives)
                 if remaining <= 0:
                     break
@@ -212,13 +211,6 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
                     )
                     warned_empty_neg = True
 
-                if self.logger is not None:
-                    self.logger.debug(
-                        "Batch %d/%d — accepted %d/%d",
-                        batch_idx + 1, max_batches,
-                        len(self.generation_result_.hard_positives), target_count,
-                    )
-
                 batch_count = min(self.batch_size, remaining)
                 messages = [
                     {"role": "system", "content": prompts.SYSTEM},
@@ -243,7 +235,8 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
                 self.generation_result_.positive_features.extend(result.positive_features)
                 self.generation_result_.negative_features.extend(result.negative_features)
                 self.generation_result_.boundary_features.extend(result.boundary_features)
-                n_before = len(self.generation_result_.hard_positives)
+                if self.logger is not None and self.logger.isEnabledFor(logging.DEBUG):
+                    n_before = len(self.generation_result_.hard_positives)
                 for hp in result.hard_positives:
                     if len(self.generation_result_.hard_positives) >= target_count:
                         break
@@ -251,11 +244,11 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
                         self.generation_result_.hard_positives.append(hp)
                         if pbar is not None:
                             pbar.update(1)
-                if self.logger is not None:
-                    n_accepted = len(self.generation_result_.hard_positives) - n_before
+                if self.logger is not None and self.logger.isEnabledFor(logging.DEBUG):
                     self.logger.debug(
                         "Batch %d/%d: accepted %d new sample(s) (%d/%d total)",
-                        batch_idx + 1, max_batches, n_accepted,
+                        batch_idx + 1, max_batches,
+                        len(self.generation_result_.hard_positives) - n_before,  # type: ignore[possibly-undefined]
                         len(self.generation_result_.hard_positives), target_count,
                     )
         finally:
