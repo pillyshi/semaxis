@@ -6,7 +6,7 @@ import os
 import random
 import warnings
 from math import ceil
-from typing import Any
+from typing import Any, Protocol
 
 from pydantic import BaseModel, Field
 from sklearn.base import BaseEstimator
@@ -33,6 +33,10 @@ class HardPositiveGenerationResult(BaseModel):
     negative_features: list[str]
     boundary_features: list[BoundaryFeature]
     hard_positives: list[HardPositive]
+
+
+class _Logger(Protocol):
+    def debug(self, msg: object, /, *args: object, **kwargs: object) -> None: ...
 
 
 class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
@@ -78,7 +82,7 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
         sample_method: str = "random",
         embedding_model: str = "paraphrase-albert-small-v2",
         verbose: bool = False,
-        logger: logging.Logger | None = None,
+        logger: _Logger | None = None,
     ) -> None:
         self.llm = llm
         self.n_synthesized = n_synthesized
@@ -237,7 +241,12 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
                 self.generation_result_.positive_features.extend(result.positive_features)
                 self.generation_result_.negative_features.extend(result.negative_features)
                 self.generation_result_.boundary_features.extend(result.boundary_features)
-                debug_log = self.logger is not None and self.logger.isEnabledFor(logging.DEBUG)
+                # loguru lacks isEnabledFor; when it's absent debug_log is always
+                # True and loguru does its own level filtering inside debug().
+                debug_log = self.logger is not None and (
+                    not hasattr(self.logger, "isEnabledFor")
+                    or self.logger.isEnabledFor(logging.DEBUG)  # type: ignore[union-attr]
+                )
                 if debug_log:
                     n_before = len(self.generation_result_.hard_positives)
                 for hp in result.hard_positives:
@@ -248,11 +257,10 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
                         if pbar is not None:
                             pbar.update(1)
                 if debug_log:
+                    n_accepted = len(self.generation_result_.hard_positives) - n_before
+                    n_total = len(self.generation_result_.hard_positives)
                     self.logger.debug(  # type: ignore[union-attr]
-                        "Batch %d/%d: accepted %d new sample(s) (%d/%d total)",
-                        batch_idx + 1, max_batches,
-                        len(self.generation_result_.hard_positives) - n_before,
-                        len(self.generation_result_.hard_positives), target_count,
+                        f"Batch {batch_idx + 1}/{max_batches}: accepted {n_accepted} new sample(s) ({n_total}/{target_count} total)"
                     )
         finally:
             if pbar is not None:

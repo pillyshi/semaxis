@@ -586,3 +586,20 @@ def test_logger_debug_suppressed_when_level_above_debug():
     llm = _make_llm(n_hard_positives=1)
     _fit_resample(sampler, llm)
     logger.debug.assert_not_called()
+
+
+def test_loguru_logger_receives_debug_messages():
+    # loguru Logger has no isEnabledFor; debug() should still be called
+    logger = MagicMock(spec=["debug"])
+    sampler = HardPositiveOverSampler(llm=MagicMock(), n_synthesized=2, logger=logger)
+    llm = _make_llm(n_hard_positives=2)
+    _fit_resample(sampler, llm)
+    assert logger.debug.call_count >= 1
+
+
+def test_loguru_logger_no_attribute_error():
+    logger = MagicMock(spec=["debug"])
+    sampler = HardPositiveOverSampler(llm=MagicMock(), n_synthesized=1, logger=logger)
+    llm = _make_llm(n_hard_positives=1)
+    X_aug, _ = _fit_resample(sampler, llm)
+    assert "gen 0" in X_aug
