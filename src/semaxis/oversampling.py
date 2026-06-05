@@ -251,7 +251,7 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
                     self.logger.debug(  # type: ignore[union-attr]
                         "Batch %d/%d: accepted %d new sample(s) (%d/%d total)",
                         batch_idx + 1, max_batches,
-                        len(self.generation_result_.hard_positives) - n_before,  # type: ignore[possibly-undefined]
+                        len(self.generation_result_.hard_positives) - n_before,
                         len(self.generation_result_.hard_positives), target_count,
                     )
         finally:
