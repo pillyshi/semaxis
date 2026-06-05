@@ -209,7 +209,7 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
             except Exception as e:
                 if not warned_exception:
                     warnings.warn(
-                        f"Skipping batch due to error: {e}",
+                        f"Skipping batch due to {type(e).__name__}: {e}",
                         UserWarning,
                         stacklevel=2,
                     )
