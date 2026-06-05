@@ -196,13 +196,13 @@ def test_fit_resample_max_examples_per_class_invalid_raises():
         sampler.fit_resample(["a", "b"], [1, 0])
 
 
-def test_fit_resample_validation_error_raises_value_error():
+def test_fit_resample_skips_batch_on_exception_and_warns():
     sampler = HardPositiveOverSampler(llm=MagicMock(), n_synthesized=1)
     llm = MagicMock()
     llm.count_tokens.return_value = 1
     llm.complete_structured.side_effect = ValueError("LLM returned an unexpected JSON structure")
     sampler.llm = llm
-    with pytest.raises(ValueError, match="unexpected JSON structure"):
+    with pytest.warns(UserWarning, match="Skipping batch"):
         sampler.fit_resample(["pos A", "neg B"], [1, 0])
 
 

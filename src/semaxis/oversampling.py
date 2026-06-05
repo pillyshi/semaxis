@@ -203,7 +203,15 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
                     language=self.language,
                 )},
             ]
-            result = _llm.complete_structured(messages, HardPositiveGenerationResult)
+            try:
+                result = _llm.complete_structured(messages, HardPositiveGenerationResult)
+            except Exception as e:
+                warnings.warn(
+                    f"Skipping batch due to error: {e}",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                continue
             self.generation_result_.positive_features.extend(result.positive_features)
             self.generation_result_.negative_features.extend(result.negative_features)
             self.generation_result_.boundary_features.extend(result.boundary_features)
