@@ -179,7 +179,9 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
         warned_empty_neg = False
         warned_exception = False
 
-        pbar = _tqdm(total=target_count, desc="Generating hard positives") if self.verbose else None  # type: ignore[possibly-undefined]
+        pbar = None
+        if self.verbose:
+            pbar = _tqdm(total=target_count, desc="Generating hard positives")  # type: ignore[possibly-undefined]
 
         try:
             for batch_idx in range(max_batches):

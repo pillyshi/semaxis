@@ -521,6 +521,7 @@ def test_verbose_true_updates_progress_bar():
         sampler.fit_resample(["pos A", "pos B", "neg C", "neg D"], [1, 1, 0, 0])
     mock_tqdm_cls.assert_called_once_with(total=2, desc="Generating hard positives")
     assert mock_pbar.update.call_count == 2
+    assert all(call.args == (1,) for call in mock_pbar.update.call_args_list)
     mock_pbar.close.assert_called_once()
 
 
@@ -545,6 +546,9 @@ def test_verbose_true_without_tqdm_raises():
     with patch.dict("sys.modules", {"tqdm": None, "tqdm.auto": None}):
         with pytest.raises(ImportError, match="tqdm is required when verbose=True"):
             sampler.fit_resample(["pos A", "neg B"], [1, 0])
+    assert not hasattr(sampler, "generation_result_"), (
+        "generation_result_ must not be set when fit_resample raises before completing"
+    )
 
 
 # ---------------------------------------------------------------------------
