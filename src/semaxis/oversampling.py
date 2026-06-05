@@ -206,7 +206,7 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
             ]
             try:
                 result = _llm.complete_structured(messages, HardPositiveGenerationResult)
-            except (ValueError, RuntimeError, OSError) as e:
+            except Exception as e:
                 if not warned_exception:
                     warnings.warn(
                         f"Skipping batch due to error: {e}",
