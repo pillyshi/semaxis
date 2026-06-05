@@ -241,6 +241,8 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
                 self.generation_result_.positive_features.extend(result.positive_features)
                 self.generation_result_.negative_features.extend(result.negative_features)
                 self.generation_result_.boundary_features.extend(result.boundary_features)
+                # loguru lacks isEnabledFor; when it's absent debug_log is always
+                # True and loguru does its own level filtering inside debug().
                 debug_log = self.logger is not None and (
                     not hasattr(self.logger, "isEnabledFor")
                     or self.logger.isEnabledFor(logging.DEBUG)  # type: ignore[union-attr]
@@ -256,7 +258,7 @@ class HardPositiveOverSampler(_LLMTransformerMixin, BaseEstimator):
                             pbar.update(1)
                 if debug_log:
                     self.logger.debug(  # type: ignore[union-attr]
-                        "Batch %d/%d: accepted %d new sample(s) (%d/%d total)",
+                        "Batch {}/{}: accepted {} new sample(s) ({}/{} total)",
                         batch_idx + 1, max_batches,
                         len(self.generation_result_.hard_positives) - n_before,
                         len(self.generation_result_.hard_positives), target_count,
