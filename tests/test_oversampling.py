@@ -206,6 +206,7 @@ def test_fit_resample_skips_batch_on_exception_and_warns():
         X_aug, y_aug = sampler.fit_resample(["pos A", "neg B"], [1, 0])
     skipping = [w for w in record if "Skipping batch" in str(w.message)]
     assert len(skipping) == 1
+    assert llm.complete_structured.call_count == 3
     assert X_aug == ["pos A", "neg B"]
     assert y_aug == [1, 0]
     assert sampler.generation_result_.hard_positives == []
