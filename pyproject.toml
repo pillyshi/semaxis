@@ -30,7 +30,7 @@ twine = "^6.2.0"
 optional = true
 
 [tool.poetry.group.llamacpp.dependencies]
-llama-cpp-python = ">=0.2.20"
+llama-cpp-python = ">=0.2.34"
 
 [tool.poetry.group.progress]
 optional = true
