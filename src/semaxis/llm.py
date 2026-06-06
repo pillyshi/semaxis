@@ -89,6 +89,8 @@ class LlamaCppClient:
             response_format={"type": "json_object"},
         )
         content = result["choices"][0]["message"]["content"] or ""
+        # Use _extract_json rather than json.loads directly: grammar enforcement quality
+        # varies by model and quantization, so some outputs may include markdown fences.
         return _extract_json(content)
 
     def complete_structured(self, messages: list[dict[str, str]], response_model: type[T]) -> T:
