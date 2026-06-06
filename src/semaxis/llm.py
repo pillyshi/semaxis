@@ -67,64 +67,42 @@ class LLMClient:
         return len(self._encoding.encode(text))
 
 
-class LangChainLLMClient:
-    """LLM client backed by any LangChain BaseChatModel.
-
-    Supports Ollama, llama.cpp, and any other LangChain-compatible provider.
+class LlamaCppClient:
+    """LLM client backed by a llama-cpp-python Llama instance for in-process inference.
 
     Example::
 
-        from langchain_ollama import ChatOllama
-        client = LangChainLLMClient(ChatOllama(model="llama3.2", format="json"))
+        from llama_cpp import Llama
+        client = LlamaCppClient(Llama(model_path="path/to/model.gguf", n_ctx=4096))
     """
 
     def __init__(self, model: Any) -> None:
         self._model = model
 
     def complete(self, messages: list[dict[str, str]]) -> str:
-        """Invoke the LangChain model and return the response string."""
-        from langchain_core.messages import HumanMessage, SystemMessage
-
-        lc_messages: list[SystemMessage | HumanMessage] = []
-        for m in messages:
-            role = m.get("role", "user")
-            content = m.get("content", "")
-            if role == "system":
-                lc_messages.append(SystemMessage(content=content))
-            else:
-                lc_messages.append(HumanMessage(content=content))
-
-        response = self._model.invoke(lc_messages)
-        return response.content
+        result = self._model.create_chat_completion(messages=messages)
+        return result["choices"][0]["message"]["content"] or ""
 
     def complete_json(self, messages: list[dict[str, str]]) -> Any:
-        """Invoke the model and extract a JSON object from the response."""
-        content = self.complete(messages)
+        result = self._model.create_chat_completion(
+            messages=messages,
+            response_format={"type": "json_object"},
+        )
+        content = result["choices"][0]["message"]["content"] or ""
         return _extract_json(content)
 
     def complete_structured(self, messages: list[dict[str, str]], response_model: type[T]) -> T:
-        """Invoke the model with grammar-constrained structured output."""
-        from langchain_core.messages import HumanMessage, SystemMessage
-
-        lc_messages: list[SystemMessage | HumanMessage] = []
-        for m in messages:
-            role = m.get("role", "user")
-            content = m.get("content", "")
-            if role == "system":
-                lc_messages.append(SystemMessage(content=content))
-            else:
-                lc_messages.append(HumanMessage(content=content))
-
-        structured_model = self._model.with_structured_output(response_model)
-        return structured_model.invoke(lc_messages)  # type: ignore[return-value]
+        schema = response_model.model_json_schema()
+        result = self._model.create_chat_completion(
+            messages=messages,
+            response_format={"type": "json_object", "schema": schema},
+        )
+        content = result["choices"][0]["message"]["content"] or ""
+        data = _extract_json(content)
+        return response_model.model_validate(data)
 
     def count_tokens(self, text: str) -> int:
-        """Return an approximate token count for the given text."""
-        try:
-            return self._model.get_num_tokens(text)
-        except (NotImplementedError, AttributeError):
-            # Fallback: ~4 characters per token (reasonable for English)
-            return len(text) // 4
+        return len(self._model.tokenize(text.encode()))
 
 
 def _extract_json(text: str) -> Any:

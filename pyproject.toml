@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "semaxis"
-version = "0.22.0"
+version = "0.23.0"
 description = "Interpretable NLI-based text features for scikit-learn"
 authors = []
 packages = [{include = "semaxis", from = "src"}]
@@ -26,12 +26,11 @@ optional = true
 [tool.poetry.group.publish.dependencies]
 twine = "^6.2.0"
 
-[tool.poetry.group.langchain]
+[tool.poetry.group.llamacpp]
 optional = true
 
-[tool.poetry.group.langchain.dependencies]
-langchain-core = ">=0.3"
-langchain-ollama = ">=0.3"
+[tool.poetry.group.llamacpp.dependencies]
+llama-cpp-python = ">=0.2.20"
 
 [tool.poetry.group.progress]
 optional = true
@@ -47,5 +46,5 @@ build-backend = "poetry.core.masonry.api"
 python_version = "3.11"
 
 [[tool.mypy.overrides]]
-module = ["sklearn.*", "sentence_transformers.*", "tqdm.*"]
+module = ["sklearn.*", "sentence_transformers.*", "tqdm.*", "llama_cpp.*"]
 ignore_missing_imports = true
