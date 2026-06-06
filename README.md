@@ -181,16 +181,22 @@ sampler = HardPositiveOverSampler(
 
 ## Custom LLM
 
-Any [LangChain](https://python.langchain.com/)-compatible model works via `LangChainLLMClient`:
+For in-process inference, use `LlamaCppClient` backed by [llama-cpp-python](https://github.com/abetlen/llama-cpp-python):
 
 ```python
-from langchain_ollama import ChatOllama
+from llama_cpp import Llama
 from semaxis import UnsupervisedTransformer
-from semaxis import LangChainLLMClient
+from semaxis import LlamaCppClient
 
-llm = LangChainLLMClient(ChatOllama(model="llama3.2", format="json"))
+llm = LlamaCppClient(Llama(model_path="path/to/model.gguf", n_ctx=4096))
 
 vect = UnsupervisedTransformer(llm=llm, nli_model="cross-encoder/nli-deberta-v3-large")
+```
+
+Install the optional dependency with:
+
+```bash
+pip install "semaxis[llamacpp]"
 ```
 
 ---

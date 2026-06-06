@@ -1,4 +1,4 @@
-from .llm import LangChainLLMClient, LLMClient
+from .llm import LlamaCppClient, LLMClient
 from .oversampling import (
     BoundaryFeature,
     HardPositive,
@@ -13,7 +13,7 @@ __all__ = [
     "UnsupervisedTransformer",
     "FeatureMeta",
     "LLMClient",
-    "LangChainLLMClient",
+    "LlamaCppClient",
     "HardPositiveOverSampler",
     "HardPositive",
     "BoundaryFeature",

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import re
 from typing import Any, Protocol, TypeVar, runtime_checkable
 
 import tiktoken
@@ -67,95 +66,64 @@ class LLMClient:
         return len(self._encoding.encode(text))
 
 
-class LangChainLLMClient:
-    """LLM client backed by any LangChain BaseChatModel.
-
-    Supports Ollama, llama.cpp, and any other LangChain-compatible provider.
+class LlamaCppClient:
+    """LLM client backed by a llama-cpp-python Llama instance for in-process inference.
 
     Example::
 
-        from langchain_ollama import ChatOllama
-        client = LangChainLLMClient(ChatOllama(model="llama3.2", format="json"))
+        from llama_cpp import Llama
+        client = LlamaCppClient(Llama(model_path="path/to/model.gguf", n_ctx=4096))
     """
 
     def __init__(self, model: Any) -> None:
         self._model = model
 
     def complete(self, messages: list[dict[str, str]]) -> str:
-        """Invoke the LangChain model and return the response string."""
-        from langchain_core.messages import HumanMessage, SystemMessage
-
-        lc_messages: list[SystemMessage | HumanMessage] = []
-        for m in messages:
-            role = m.get("role", "user")
-            content = m.get("content", "")
-            if role == "system":
-                lc_messages.append(SystemMessage(content=content))
-            else:
-                lc_messages.append(HumanMessage(content=content))
-
-        response = self._model.invoke(lc_messages)
-        return response.content
+        result = self._model.create_chat_completion(messages=messages)
+        return _chat_content(result)
 
     def complete_json(self, messages: list[dict[str, str]]) -> Any:
-        """Invoke the model and extract a JSON object from the response."""
-        content = self.complete(messages)
-        return _extract_json(content)
+        result = self._model.create_chat_completion(
+            messages=messages,
+            response_format={"type": "json_object"},
+        )
+        return json.loads(_chat_content(result))
 
     def complete_structured(self, messages: list[dict[str, str]], response_model: type[T]) -> T:
-        """Invoke the model with grammar-constrained structured output."""
-        from langchain_core.messages import HumanMessage, SystemMessage
-
-        lc_messages: list[SystemMessage | HumanMessage] = []
-        for m in messages:
-            role = m.get("role", "user")
-            content = m.get("content", "")
-            if role == "system":
-                lc_messages.append(SystemMessage(content=content))
-            else:
-                lc_messages.append(HumanMessage(content=content))
-
-        structured_model = self._model.with_structured_output(response_model)
-        return structured_model.invoke(lc_messages)  # type: ignore[return-value]
+        # Inline $ref pointers so llama-cpp's grammar converter sees a fully resolved schema.
+        schema = _inline_refs(response_model.model_json_schema())
+        result = self._model.create_chat_completion(
+            messages=messages,
+            response_format={"type": "json_object", "schema": schema},
+        )
+        return response_model.model_validate(json.loads(_chat_content(result)))
 
     def count_tokens(self, text: str) -> int:
-        """Return an approximate token count for the given text."""
-        try:
-            return self._model.get_num_tokens(text)
-        except (NotImplementedError, AttributeError):
-            # Fallback: ~4 characters per token (reasonable for English)
-            return len(text) // 4
+        return len(self._model.tokenize(text.encode(), add_bos=False))
 
 
-def _extract_json(text: str) -> Any:
-    """Extract a JSON object from a string, tolerating surrounding prose.
+def _chat_content(result: dict[str, Any]) -> str:
+    return result["choices"][0]["message"]["content"] or ""
 
-    Tries in order:
-    1. Direct json.loads (model output is clean JSON)
-    2. Extract from a markdown code block (```json ... ```)
-    3. Extract the first {...} or [...] block via regex
+
+def _inline_refs(schema: dict[str, Any]) -> dict[str, Any]:
+    """Recursively resolve $ref pointers against $defs, returning a flat schema.
+
+    llama-cpp-python's grammar converter may not resolve $ref in all versions,
+    so we inline before passing the schema.
     """
-    text = text.strip()
+    defs = schema.get("$defs", {})
 
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        pass
+    def resolve(node: Any, _visiting: frozenset[str] = frozenset()) -> Any:
+        if isinstance(node, dict):
+            if "$ref" in node:
+                ref: str = node["$ref"]
+                if ref.startswith("#/$defs/") and ref not in _visiting:
+                    return resolve(defs[ref[len("#/$defs/"):]], _visiting | {ref})
+                return node  # circular ref — leave as-is
+            return {k: resolve(v, _visiting) for k, v in node.items() if k != "$defs"}
+        if isinstance(node, list):
+            return [resolve(item, _visiting) for item in node]
+        return node
 
-    # Try markdown code block
-    code_block = re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", text)
-    if code_block:
-        try:
-            return json.loads(code_block.group(1))
-        except json.JSONDecodeError:
-            pass
-
-    # Try first {...} or [...] block
-    brace_match = re.search(r"(\{[\s\S]*\}|\[[\s\S]*\])", text)
-    if brace_match:
-        try:
-            return json.loads(brace_match.group(1))
-        except json.JSONDecodeError:
-            pass
-
-    raise ValueError(f"Could not extract JSON from model response:\n{text}")
+    return resolve(schema)  # type: ignore[return-value]
