@@ -114,16 +114,16 @@ def _inline_refs(schema: dict[str, Any]) -> dict[str, Any]:
     """
     defs = schema.get("$defs", {})
 
-    def resolve(node: Any) -> Any:
+    def resolve(node: Any, _visiting: frozenset[str] = frozenset()) -> Any:
         if isinstance(node, dict):
             if "$ref" in node:
                 ref: str = node["$ref"]
-                if ref.startswith("#/$defs/"):
-                    return resolve(defs[ref[len("#/$defs/"):]])
-                return node
-            return {k: resolve(v) for k, v in node.items() if k != "$defs"}
+                if ref.startswith("#/$defs/") and ref not in _visiting:
+                    return resolve(defs[ref[len("#/$defs/"):]], _visiting | {ref})
+                return node  # circular ref — leave as-is
+            return {k: resolve(v, _visiting) for k, v in node.items() if k != "$defs"}
         if isinstance(node, list):
-            return [resolve(item) for item in node]
+            return [resolve(item, _visiting) for item in node]
         return node
 
     return resolve(schema)  # type: ignore[return-value]
