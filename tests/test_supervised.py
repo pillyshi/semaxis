@@ -490,6 +490,19 @@ def test_fit_multilabel_ovo_raises():
             t.fit(["a", "b", "c"], y)
 
 
+def test_fit_multilabel_sparse():
+    from scipy.sparse import csr_matrix
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
+    texts = ["t0", "t1", "t2", "t3", "t4", "t5"]
+    y_sparse = csr_matrix(np.array([[1, 0], [1, 1], [0, 1], [1, 0], [0, 0], [0, 1]]))
+    with patch("semaxis.supervised.NLIModel", return_value=_make_nli()):
+        t.llm = _make_llm(2)
+        result = t.fit(texts, y_sparse)
+    assert result is t
+    np.testing.assert_array_equal(t.classes_, [0, 1])
+    assert len(t.features_) == 2 * 2
+
+
 def test_save_load_roundtrip_multilabel(tmp_path):
     t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
     nli = _make_nli(0.6)
@@ -506,3 +519,5 @@ def test_save_load_roundtrip_multilabel(tmp_path):
     np.testing.assert_array_equal(loaded.classes_, t.classes_)
     assert loaded.classes_.dtype == t.classes_.dtype
     assert loaded.feature_meta_ == t.feature_meta_
+    texts_for_transform = ["t0", "t1"]
+    np.testing.assert_array_equal(t.transform(texts_for_transform), loaded.transform(texts_for_transform))
