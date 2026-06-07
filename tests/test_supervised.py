@@ -462,6 +462,25 @@ def test_fit_multilabel_meta_covers_all_labels():
     assert positives == {0, 1}
 
 
+def test_fit_multilabel_empty_positive_raises():
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
+    # label 0 has both; label 1 has no positive examples
+    y = np.array([[1, 0], [0, 0], [1, 0]])
+    with pytest.raises(ValueError, match="Label column 1"):
+        with patch("semaxis.supervised.NLIModel", return_value=_make_nli()):
+            t.llm = _make_llm(2)
+            t.fit(["a", "b", "c"], y)
+
+
+def test_fit_multilabel_empty_negative_raises():
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
+    y = np.array([[1, 1], [1, 1], [1, 1]])  # label 0 has no negative examples
+    with pytest.raises(ValueError, match="Label column 0"):
+        with patch("semaxis.supervised.NLIModel", return_value=_make_nli()):
+            t.llm = _make_llm(2)
+            t.fit(["a", "b", "c"], y)
+
+
 def test_fit_multilabel_ovo_raises():
     t = SupervisedTransformer(llm=MagicMock(), nli_model="m", strategy="ovo")
     y = np.array([[1, 0], [0, 1], [1, 1]])
@@ -485,4 +504,5 @@ def test_save_load_roundtrip_multilabel(tmp_path):
 
     assert loaded.features_ == t.features_
     np.testing.assert_array_equal(loaded.classes_, t.classes_)
+    assert loaded.classes_.dtype == t.classes_.dtype
     assert loaded.feature_meta_ == t.feature_meta_

@@ -153,6 +153,11 @@ class SupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMixi
             for j in range(n_labels):
                 pos_texts = [t for t, row in zip(texts, Y) if row[j] == 1]
                 neg_texts = [t for t, row in zip(texts, Y) if row[j] == 0]
+                if not pos_texts or not neg_texts:
+                    side = "positive" if not pos_texts else "negative"
+                    raise ValueError(
+                        f"Label column {j} has no {side} examples in the training set."
+                    )
                 groups.append((pos_texts, neg_texts, j, "rest"))
         else:
             le = LabelEncoder()
