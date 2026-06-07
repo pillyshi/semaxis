@@ -62,6 +62,13 @@ more expensive feature-generation process.
   hazard-category target.
 - [`../notes/balek-2025.md`](../notes/balek-2025.md) records this automated
   discovery workflow and its similarity to supervised SemAxis generation.
+- Cosma et al. 2026. *Automatic Prompt Optimization for Dataset-Level Feature
+  Discovery*. Its dataset-level prompt optimization setup explicitly warns
+  that optimizing feature discovery for F1 alone can produce features that
+  restate the target label, such as sentiment-label features, and uses an
+  interpretability scorer to penalize them.
+- [`../notes/cosma-2026.md`](../notes/cosma-2026.md) records this feedback-loop
+  feature-discovery workflow and its label-proxy warning.
 - Yin et al. 2019. *Benchmarking Zero-shot Text Classification*. The paper
   turns class labels into NLI hypotheses and shows that label wording
   (`word`, `definition`, or a combination) changes results across tasks and
@@ -69,6 +76,13 @@ more expensive feature-generation process.
   generated features merely paraphrase labels.
 - [`../notes/yin-2019.md`](../notes/yin-2019.md) records the entailment
   formulation and hypothesis-wording sensitivity.
+- Ma et al. 2021. *Issues with Entailment-based Zero-shot Text Classification*.
+  The paper shows that entailment-based zero-shot classification can vary
+  substantially across datasets and NLI fine-tuning sources, and that raw BERT
+  sentence-pair scoring can be competitive with NLI-fine-tuned models. This
+  makes the direct NLI baseline necessary but not a semantic oracle.
+- [`../notes/ma-2021.md`](../notes/ma-2021.md) records the instability and
+  lexical-pattern concerns relevant to SemAxis NLI feature scores.
 - Current `src/semaxis/supervised.py` passes class labels to generation and
   stores all returned hypotheses without a leakage audit.
 

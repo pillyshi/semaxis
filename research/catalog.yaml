@@ -1,161 +1,294 @@
 catalog_version: 1
 project: semaxis
-verified_on: "2026-05-26"
+verified_on: '2026-05-26'
 verification:
   provider: OpenAlex
   client: pyalex
-  command_environment: "poetry run"
+  command_environment: poetry run
 source_reports:
-  - reports/deep-research-report.md
-
+- reports/deep-research-report.md
 papers:
-  - key: felix-2024
-    title: "FELIX: Automatic and Interpretable Feature Engineering Using LLMs"
-    authors:
-      - "Simon Malberg"
-      - "E. Mosca"
-      - "Georg Groh"
+- key: felix-2024
+  title: 'FELIX: Automatic and Interpretable Feature Engineering Using LLMs'
+  authors:
+  - Simon Malberg
+  - E. Mosca
+  - Georg Groh
+  year: 2024
+  publication_type: book-chapter
+  venue: Lecture Notes in Computer Science
+  identifiers:
+    doi: 10.1007/978-3-031-70359-1_14
+    openalex: W4402011475
+  relevance: direct_competitor
+  priority: must_read
+  rationale: LLM-generated interpretable features are assigned and passed to a downstream classifier.
+  note_status: drafted
+  pdf_status: cached
+  local_pdf: pdfs/felix-2024.pdf
+- key: tbm-2023
+  title: Interpretable-by-Design Text Understanding with Iteratively Generated Concept Bottleneck
+  authors:
+  - Josh Magnus Ludan
+  - Qing Lyu
+  - Yue Yang
+  - Liam Dugan
+  - Mark Yatskar
+  - Chris Callison-Burch
+  year: 2023
+  publication_type: preprint
+  venue: arXiv
+  identifiers:
+    doi: 10.48550/arxiv.2310.19660
+    arxiv: '2310.19660'
+    openalex: W4388110129
+  relevance: direct_competitor
+  priority: must_read
+  rationale: Automatically discovers and measures text concepts before linear prediction.
+  note_status: drafted
+  pdf_status: cached
+  local_pdf: pdfs/tbm-2023.pdf
+- key: chill-2023
+  title: 'CHiLL: Zero-shot Custom Interpretable Feature Extraction from Clinical Notes with Large Language Models'
+  authors:
+  - Denis McInerney
+  - Geoffrey S. Young
+  - Jan-Willem van de Meent
+  - Byron Wallace
+  year: 2023
+  publication_type: article
+  venue: Findings of EMNLP 2023
+  identifiers:
+    doi: 10.18653/v1/2023.findings-emnlp.568
+    acl_anthology: 2023.findings-emnlp.568
+    openalex: W4389520444
+  relevance: direct_competitor
+  priority: must_read
+  rationale: Extracts natural-language high-level features and uses them in a linear model.
+  note_status: drafted
+  pdf_status: cached
+  local_pdf: pdfs/chill-2023.pdf
+- key: balek-2025
+  title: LLM-based feature generation from text for interpretable machine learning
+  authors:
+  - Vojtěch Balek
+  - Lukáš Sýkora
+  - Vilém Sklenák
+  - Tomáš Kliegr
+  year: 2025
+  publication_type: article
+  venue: Machine Learning
+  identifiers:
+    doi: 10.1007/s10994-025-06867-1
+    openalex: W4414681764
+  relevance: direct_competitor
+  priority: must_read
+  rationale: Generates interpretable text features for classification and rule discovery.
+  note_status: drafted
+  pdf_status: cached
+  related_versions:
+  - publication_type: preprint
     year: 2024
-    publication_type: book-chapter
-    venue: "Lecture Notes in Computer Science"
     identifiers:
-      doi: "10.1007/978-3-031-70359-1_14"
-      openalex: "W4402011475"
-    relevance: direct_competitor
-    priority: must_read
-    rationale: "LLM-generated interpretable features are assigned and passed to a downstream classifier."
-    note_status: drafted
-    pdf_status: cached
-    local_pdf: "pdfs/felix-2024.pdf"
-
-  - key: tbm-2023
-    title: "Interpretable-by-Design Text Understanding with Iteratively Generated Concept Bottleneck"
-    authors:
-      - "Josh Magnus Ludan"
-      - "Qing Lyu"
-      - "Yue Yang"
-      - "Liam Dugan"
-      - "Mark Yatskar"
-      - "Chris Callison-Burch"
-    year: 2023
-    publication_type: preprint
-    venue: arXiv
-    identifiers:
-      doi: "10.48550/arXiv.2310.19660"
-      arxiv: "2310.19660"
-      openalex: "W4388110129"
-    relevance: direct_competitor
-    priority: must_read
-    rationale: "Automatically discovers and measures text concepts before linear prediction."
-    note_status: drafted
-    pdf_status: cached
-    local_pdf: "pdfs/tbm-2023.pdf"
-
-  - key: chill-2023
-    title: "CHiLL: Zero-shot Custom Interpretable Feature Extraction from Clinical Notes with Large Language Models"
-    authors:
-      - "Denis McInerney"
-      - "Geoffrey S. Young"
-      - "Jan-Willem van de Meent"
-      - "Byron Wallace"
-    year: 2023
-    publication_type: article
-    venue: "Findings of EMNLP 2023"
-    identifiers:
-      doi: "10.18653/v1/2023.findings-emnlp.568"
-      acl_anthology: "2023.findings-emnlp.568"
-      openalex: "W4389520444"
-    relevance: direct_competitor
-    priority: must_read
-    rationale: "Extracts natural-language high-level features and uses them in a linear model."
-    note_status: drafted
-    pdf_status: cached
-    local_pdf: "pdfs/chill-2023.pdf"
-
-  - key: balek-2025
-    title: "LLM-based feature generation from text for interpretable machine learning"
-    authors:
-      - "Vojtěch Balek"
-      - "Lukáš Sýkora"
-      - "Vilém Sklenák"
-      - "Tomáš Kliegr"
-    year: 2025
-    publication_type: article
-    venue: "Machine Learning"
-    identifiers:
-      doi: "10.1007/s10994-025-06867-1"
-      openalex: "W4414681764"
-    related_versions:
-      - publication_type: preprint
-        year: 2024
-        identifiers:
-          doi: "10.48550/arXiv.2409.07132"
-          arxiv: "2409.07132"
-          openalex: "W4403621451"
-    relevance: direct_competitor
-    priority: must_read
-    rationale: "Generates interpretable text features for classification and rule discovery."
-    note_status: drafted
-    pdf_status: cached
-    cached_version: preprint
-    local_pdf: "pdfs/balek-2024-preprint.pdf"
-
-  - key: logipart-2025
-    title: "LogiPart: Local Large Language Models for Data Exploration at Scale with Logical Partitioning"
-    authors:
-      - "Tiago Fernandes Tavares"
-    year: 2025
-    publication_type: preprint
-    venue: arXiv
-    identifiers:
-      doi: "10.48550/arXiv.2509.22211"
-      arxiv: "2509.22211"
-      openalex: "W7083679346"
-    relevance: direct_competitor
-    priority: must_read
-    rationale: "Combines natural-language logical partitions with NLI-based assignment."
-    note_status: drafted
-    pdf_status: cached
-    local_pdf: "pdfs/2509.22211v3.pdf"
-
-  - key: yin-2019
-    title: "Benchmarking Zero-shot Text Classification: Datasets, Evaluation and Entailment Approach"
-    authors:
-      - "Wenpeng Yin"
-      - "Jamaal Hay"
-      - "Dan Roth"
-    year: 2019
-    publication_type: article
-    venue: "EMNLP-IJCNLP 2019"
-    identifiers:
-      doi: "10.18653/v1/D19-1404"
-      acl_anthology: "D19-1404"
-      openalex: "W2970200208"
-    relevance: component_basis
-    priority: must_read
-    rationale: "Provides the core entailment formulation for zero-shot text classification."
-    note_status: drafted
-    pdf_status: cached
-    local_pdf: "pdfs/yin-2019.pdf"
-
-  - key: cosma-2026
-    title: "Automatic Prompt Optimization for Dataset-Level Feature Discovery"
-    authors:
-      - "Adrian Cosma"
-      - "Oleg Szehr"
-      - "David Kletz"
-      - "Alessandro Antonucci"
-      - "Olivier Pelletier"
-    year: 2026
-    publication_type: preprint
-    venue: arXiv
-    identifiers:
-      doi: "10.48550/arXiv.2601.13922"
-      arxiv: "2601.13922"
-      openalex: "W7125115128"
-    relevance: candidate_related_work
-    priority: to_review
-    rationale: "Existing local PDF whose dataset-level feature discovery framing may be relevant to SemAxis."
-    note_status: pending
-    pdf_status: cached
-    local_pdf: "pdfs/2601.13922v1.pdf"
+      doi: 10.48550/arxiv.2409.07132
+      arxiv: '2409.07132'
+      openalex: W4403621451
+  cached_version: preprint
+  local_pdf: pdfs/balek-2024-preprint.pdf
+- key: logipart-2025
+  title: 'LogiPart: Local Large Language Models for Data Exploration at Scale with Logical Partitioning'
+  authors:
+  - Tavares, Tiago Fernandes
+  year: 2025
+  publication_type: preprint
+  venue: arXiv
+  identifiers:
+    doi: 10.48550/arxiv.2509.22211
+    arxiv: '2509.22211'
+    openalex: W7083679346
+  relevance: direct_competitor
+  priority: must_read
+  rationale: Combines natural-language logical partitions with NLI-based assignment.
+  note_status: drafted
+  pdf_status: cached
+  local_pdf: pdfs/2509.22211v3.pdf
+- key: yin-2019
+  title: 'Benchmarking Zero-shot Text Classification: Datasets, Evaluation and Entailment Approach'
+  authors:
+  - Wenpeng Yin
+  - Jamaal Hay
+  - Dan Roth
+  year: 2019
+  publication_type: article
+  venue: EMNLP-IJCNLP 2019
+  identifiers:
+    doi: 10.18653/v1/d19-1404
+    acl_anthology: D19-1404
+    openalex: W2970200208
+  relevance: component_basis
+  priority: must_read
+  rationale: Provides the core entailment formulation for zero-shot text classification.
+  note_status: drafted
+  pdf_status: cached
+  local_pdf: pdfs/yin-2019.pdf
+- key: cosma-2026
+  title: Automatic Prompt Optimization for Dataset-Level Feature Discovery
+  authors:
+  - Cosma, Adrian
+  - Oleg Szehr
+  - David Kletz
+  - Alessandro Antonucci
+  - Olivier Pelletier
+  year: 2026
+  publication_type: preprint
+  venue: arXiv
+  identifiers:
+    doi: 10.48550/arxiv.2601.13922
+    arxiv: '2601.13922'
+    openalex: W7125115128
+  relevance: direct_competitor
+  priority: must_read
+  rationale: Optimizes dataset-level interpretable feature definitions for downstream classification and explicitly penalizes label-leaking features.
+  note_status: drafted
+  pdf_status: cached
+  local_pdf: pdfs/2601.13922v1.pdf
+- key: ma-2021
+  title: Issues with Entailment-based Zero-shot Text Classification
+  authors:
+  - Tingting Ma
+  - Jin-Ge Yao
+  - Chin-Yew Lin
+  - Tiejun Zhao
+  year: 2021
+  publication_type: article
+  venue: ACL-IJCNLP 2021
+  identifiers:
+    doi: 10.18653/v1/2021.acl-short.99
+    acl_anthology: 2021.acl-short.99
+    openalex: W3174672330
+  relevance: component_caveat
+  priority: must_read
+  rationale: Documents instability, lexical-pattern reliance, and baseline concerns for entailment-based zero-shot text classification.
+  note_status: drafted
+  pdf_status: cached
+  local_pdf: pdfs/ma-2021.pdf
+- key: gera-2022
+  title: Zero-Shot Text Classification with Self-Training
+  authors:
+  - Ariel Gera
+  - Alon Halfon
+  - Eyal Shnarch
+  - Yotam Perlitz
+  - Liat Ein‐Dor
+  - Noam Slonim
+  year: 2022
+  publication_type: article
+  venue: EMNLP 2022
+  identifiers:
+    doi: 10.18653/v1/2022.emnlp-main.73
+    acl_anthology: 2022.emnlp-main.73
+    openalex: W4385572905
+  relevance: component_basis
+  priority: must_read
+  rationale: Shows that entailment-based zero-shot classifiers can be adapted with unlabeled target-task data through self-training.
+  note_status: drafted
+  pdf_status: cached
+  local_pdf: pdfs/gera-2022.pdf
+- key: koh-2020
+  title: Concept Bottleneck Models
+  authors:
+  - Pang Wei Koh
+  - Thao Nguyen
+  - Yew Siang Tang
+  - Stephen Mussmann
+  - Emma Pierson
+  - Been Kim
+  - Percy Liang
+  year: 2020
+  publication_type: article
+  venue: ICML 2020
+  identifiers:
+    doi: 10.48550/arxiv.2007.04612
+    arxiv: '2007.04612'
+    pmlr: v119/koh20a
+    openalex: W3035602609
+  relevance: component_basis
+  priority: must_read
+  rationale: Establishes concept bottleneck models, intervention on predicted concepts, and the distinction between bottleneck features and post-hoc explanations.
+  note_status: drafted
+  pdf_status: cached
+  local_pdf: pdfs/koh-2020.pdf
+- key: liu-2022
+  title: What Makes Good In-Context Examples for GPT-3?
+  authors:
+  - Jiachang Liu
+  - Dinghan Shen
+  - Yizhe Zhang
+  - Bill Dolan
+  - Lawrence Carin
+  - Weizhu Chen
+  year: 2022
+  publication_type: article
+  venue: DeeLIO 2022
+  identifiers:
+    doi: 10.18653/v1/2022.deelio-1.10
+    acl_anthology: 2022.deelio-1.10
+    openalex: W3122241445
+  relevance: component_basis
+  priority: must_read
+  rationale: Shows that in-context example choice strongly affects LLM behavior and that semantically retrieved examples outperform random selection.
+  note_status: drafted
+  pdf_status: cached
+  local_pdf: pdfs/liu-2022-icl.pdf
+- key: su-2022
+  title: Selective Annotation Makes Language Models Better Few-Shot Learners
+  authors:
+  - Hongjin Su
+  - Jungo Kasai
+  - Chen Wu
+  - Weijia Shi
+  - Tianlu Wang
+  - Jiayi Xin
+  - Rui Zhang
+  - Mari Ostendorf
+  - Luke Zettlemoyer
+  - Noah A. Smith
+  - Changyuan Yu
+  year: 2022
+  publication_type: preprint
+  venue: arXiv / ICLR 2023
+  identifiers:
+    doi: 10.48550/arxiv.2209.01975
+    arxiv: '2209.01975'
+    openreview: qY1hlv7gwg
+    openalex: W4297633153
+  relevance: component_basis
+  priority: must_read
+  rationale: Introduces Vote-K selective annotation for diverse and representative example selection under few-shot annotation budgets.
+  note_status: drafted
+  pdf_status: cached
+  local_pdf: pdfs/su-2022.pdf
+- key: zhang-2023
+  title: 'IDEAL: Influence-Driven Selective Annotations Empower In-Context Learners in Large Language Models'
+  authors:
+  - Shaokun Zhang
+  - Xiaobo Xia
+  - Zhaoqing Wang
+  - Ling-Hao Chen
+  - Jiale Liu
+  - Qingyun Wu
+  - Tongliang Liu
+  year: 2023
+  publication_type: preprint
+  venue: arXiv / ICLR 2024
+  identifiers:
+    doi: 10.48550/arxiv.2310.10873
+    arxiv: '2310.10873'
+    openreview: Spp2i1hKwV
+    openalex: W4387806062
+  relevance: candidate_related_work
+  priority: must_read
+  rationale: Improves selective annotation over Vote-K with influence-driven subset selection and motivates benchmarking SemAxis sampling methods.
+  note_status: drafted
+  pdf_status: cached
+  local_pdf: pdfs/zhang-2023-ideal.pdf
