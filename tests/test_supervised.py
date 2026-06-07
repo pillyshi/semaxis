@@ -466,7 +466,7 @@ def test_fit_multilabel_empty_positive_raises():
     t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
     # label 0 has both; label 1 has no positive examples
     y = np.array([[1, 0], [0, 0], [1, 0]])
-    with pytest.raises(ValueError, match="Label column 1"):
+    with pytest.raises(ValueError, match="Label column 1 has no positive"):
         with patch("semaxis.supervised.NLIModel", return_value=_make_nli()):
             t.llm = _make_llm(2)
             t.fit(["a", "b", "c"], y)
@@ -475,7 +475,7 @@ def test_fit_multilabel_empty_positive_raises():
 def test_fit_multilabel_empty_negative_raises():
     t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
     y = np.array([[1, 1], [1, 1], [1, 1]])  # label 0 has no negative examples
-    with pytest.raises(ValueError, match="Label column 0"):
+    with pytest.raises(ValueError, match="Label column 0 has no negative"):
         with patch("semaxis.supervised.NLIModel", return_value=_make_nli()):
             t.llm = _make_llm(2)
             t.fit(["a", "b", "c"], y)

@@ -147,7 +147,7 @@ class SupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMixi
         if type_of_target(y) == "multilabel-indicator":
             if self.strategy == "ovo":
                 raise ValueError("strategy='ovo' is not supported for multi-label targets")
-            Y = np.asarray(y)
+            Y = y.toarray() if hasattr(y, "toarray") else np.asarray(y)
             n_labels = Y.shape[1]
             self.classes_ = np.arange(n_labels)
             for j in range(n_labels):
