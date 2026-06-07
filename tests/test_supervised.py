@@ -501,6 +501,8 @@ def test_fit_multilabel_sparse():
     assert result is t
     np.testing.assert_array_equal(t.classes_, [0, 1])
     assert len(t.features_) == 2 * 2
+    assert all(meta.negative == "rest" for meta in t.feature_meta_)
+    assert {meta.positive for meta in t.feature_meta_} == {0, 1}
 
 
 def test_save_load_roundtrip_multilabel(tmp_path):
@@ -516,6 +518,7 @@ def test_save_load_roundtrip_multilabel(tmp_path):
         loaded = SupervisedTransformer.load(path, llm=MagicMock())
 
     assert loaded.features_ == t.features_
+    assert loaded.nli_model == t.nli_model
     np.testing.assert_array_equal(loaded.classes_, t.classes_)
     assert loaded.classes_.dtype == t.classes_.dtype
     assert loaded.feature_meta_ == t.feature_meta_
