@@ -11,6 +11,7 @@ from ._base import _LLMTransformerMixin
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import LabelEncoder
+from sklearn.utils.multiclass import type_of_target
 from sklearn.utils.validation import check_is_fitted
 
 from .llm import BaseLLMClient, LLMClient
@@ -63,9 +64,12 @@ class SupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMixi
     Fits by generating hypotheses (via LLM) that distinguish between classes,
     then scores texts against those hypotheses using an NLI model.
 
-    Supports binary and multi-class labels (numeric or string).
+    Supports binary, multi-class, and multi-label targets.
     For multi-class, use ``strategy="ovr"`` (one-vs-rest) or ``strategy="ovo"``
     (one-vs-one). Binary classification ignores ``strategy``.
+    For multi-label, pass a binary indicator matrix of shape
+    ``(n_samples, n_labels)`` as ``y``; ``strategy="ovo"`` raises a
+    ``ValueError`` in that case.
 
     Fitted attributes:
         classes_: Unique class labels in sorted order.
@@ -137,34 +141,52 @@ class SupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMixi
         _llm = LLMClient(self.llm) if isinstance(self.llm, str) else self.llm
         _rng = random.Random(self.seed)
 
-        le = LabelEncoder()
-        y_enc: np.ndarray = le.fit_transform(y)
-        self.classes_ = le.classes_
-
-        n_classes = len(self.classes_)
         budget = self.context_limit - _PROMPT_OVERHEAD
+        groups: list[tuple[list[str], list[str], Any, Any]] = []
 
-        if n_classes == 2:
-            pairs: list[tuple[int, int | str]] = [(0, 1)]
-        elif self.strategy == "ovr":
-            pairs = [(i, "rest") for i in range(n_classes)]
+        if type_of_target(y) == "multilabel-indicator":
+            if self.strategy == "ovo":
+                raise ValueError("strategy='ovo' is not supported for multi-label targets")
+            Y = y.toarray() if hasattr(y, "toarray") else np.asarray(y)
+            n_labels = Y.shape[1]
+            self.classes_ = np.arange(n_labels)
+            for j in range(n_labels):
+                pos_texts = [t for t, row in zip(texts, Y) if row[j] == 1]
+                neg_texts = [t for t, row in zip(texts, Y) if row[j] == 0]
+                if not pos_texts or not neg_texts:
+                    side = "positive" if not pos_texts else "negative"
+                    raise ValueError(
+                        f"Label column {j} has no {side} examples in the training set."
+                    )
+                groups.append((pos_texts, neg_texts, j, "rest"))
         else:
-            pairs = list(combinations(range(n_classes), 2))
+            le = LabelEncoder()
+            y_enc: np.ndarray = le.fit_transform(y)
+            self.classes_ = le.classes_
+            n_classes = len(self.classes_)
+
+            if n_classes == 2:
+                pairs: list[tuple[int, int | str]] = [(0, 1)]
+            elif self.strategy == "ovr":
+                pairs = [(i, "rest") for i in range(n_classes)]
+            else:
+                pairs = list(combinations(range(n_classes), 2))
+
+            for pos_idx, neg_idx in pairs:
+                pos_label = self.classes_[pos_idx]
+                pos_texts = [t for t, yi in zip(texts, y_enc) if yi == pos_idx]
+                if neg_idx == "rest":
+                    neg_texts = [t for t, yi in zip(texts, y_enc) if yi != pos_idx]
+                    neg_label: Any = "rest"
+                else:
+                    neg_texts = [t for t, yi in zip(texts, y_enc) if yi == neg_idx]
+                    neg_label = self.classes_[neg_idx]
+                groups.append((pos_texts, neg_texts, pos_label, neg_label))
 
         self.features_: list[str] = []
         self.feature_meta_: list[FeatureMeta] = []
 
-        for pos_idx, neg_idx in pairs:
-            pos_label = self.classes_[pos_idx]
-            pos_texts = [t for t, yi in zip(texts, y_enc) if yi == pos_idx]
-
-            if neg_idx == "rest":
-                neg_texts = [t for t, yi in zip(texts, y_enc) if yi != pos_idx]
-                neg_label: Any = "rest"
-            else:
-                neg_texts = [t for t, yi in zip(texts, y_enc) if yi == neg_idx]
-                neg_label = self.classes_[neg_idx]
-
+        for pos_texts, neg_texts, pos_label, neg_label in groups:
             pos_sampled = _sample_group(
                 pos_texts, budget // 2, _llm.count_tokens,
                 self.sample_method, self.embedding_model, _rng,

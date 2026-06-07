@@ -404,3 +404,123 @@ def test_transform_empty_features_raises():
     _fit_binary(t, llm, nli)
     with pytest.raises(ValueError, match="No features"):
         t.transform(["text"])
+
+
+# ---------------------------------------------------------------------------
+# fit — multi-label
+# ---------------------------------------------------------------------------
+
+def _fit_multilabel(
+    transformer: SupervisedTransformer,
+    llm: MagicMock,
+    nli: MagicMock,
+) -> SupervisedTransformer:
+    texts = ["t0", "t1", "t2", "t3", "t4", "t5"]
+    # 3 samples per label combination; 2 labels
+    y = np.array([
+        [1, 0],
+        [1, 1],
+        [0, 1],
+        [1, 0],
+        [0, 0],
+        [0, 1],
+    ])
+    with patch("semaxis.supervised.NLIModel", return_value=nli):
+        transformer.llm = llm
+        return transformer.fit(texts, y)
+
+
+def test_fit_multilabel_returns_self():
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
+    result = _fit_multilabel(t, _make_llm(2), _make_nli())
+    assert result is t
+
+
+def test_fit_multilabel_sets_classes():
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
+    _fit_multilabel(t, _make_llm(2), _make_nli())
+    np.testing.assert_array_equal(t.classes_, [0, 1])
+
+
+def test_fit_multilabel_feature_count():
+    """Multi-label: n_labels × n_features hypotheses."""
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
+    _fit_multilabel(t, _make_llm(2), _make_nli())
+    assert len(t.features_) == 2 * 2  # 2 labels × 2 features
+
+
+def test_fit_multilabel_meta_all_rest():
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
+    _fit_multilabel(t, _make_llm(2), _make_nli())
+    assert all(meta.negative == "rest" for meta in t.feature_meta_)
+
+
+def test_fit_multilabel_meta_covers_all_labels():
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
+    _fit_multilabel(t, _make_llm(2), _make_nli())
+    positives = {meta.positive for meta in t.feature_meta_}
+    assert positives == {0, 1}
+
+
+def test_fit_multilabel_empty_positive_raises():
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
+    # label 0 has both; label 1 has no positive examples
+    y = np.array([[1, 0], [0, 0], [1, 0]])
+    with pytest.raises(ValueError, match="Label column 1 has no positive"):
+        with patch("semaxis.supervised.NLIModel", return_value=_make_nli()):
+            t.llm = _make_llm(2)
+            t.fit(["a", "b", "c"], y)
+
+
+def test_fit_multilabel_empty_negative_raises():
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
+    y = np.array([[1, 1], [1, 1], [1, 1]])  # label 0 has no negative examples
+    with pytest.raises(ValueError, match="Label column 0 has no negative"):
+        with patch("semaxis.supervised.NLIModel", return_value=_make_nli()):
+            t.llm = _make_llm(2)
+            t.fit(["a", "b", "c"], y)
+
+
+def test_fit_multilabel_ovo_raises():
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", strategy="ovo")
+    y = np.array([[1, 0], [0, 1], [1, 1]])
+    with pytest.raises(ValueError, match="multi-label"):
+        with patch("semaxis.supervised.NLIModel", return_value=_make_nli()):
+            t.llm = _make_llm(2)
+            t.fit(["a", "b", "c"], y)
+
+
+def test_fit_multilabel_sparse():
+    from scipy.sparse import csr_matrix
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
+    texts = ["t0", "t1", "t2", "t3", "t4", "t5"]
+    y_sparse = csr_matrix(np.array([[1, 0], [1, 1], [0, 1], [1, 0], [0, 0], [0, 1]]))
+    with patch("semaxis.supervised.NLIModel", return_value=_make_nli()):
+        t.llm = _make_llm(2)
+        result = t.fit(texts, y_sparse)
+    assert result is t
+    np.testing.assert_array_equal(t.classes_, [0, 1])
+    assert len(t.features_) == 2 * 2
+    assert all(meta.negative == "rest" for meta in t.feature_meta_)
+    assert {meta.positive for meta in t.feature_meta_} == {0, 1}
+
+
+def test_save_load_roundtrip_multilabel(tmp_path):
+    t = SupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
+    nli = _make_nli(0.6)
+    _fit_multilabel(t, _make_llm(2), nli)
+
+    path = tmp_path / "model_ml.json"
+    t.save(path)
+
+    nli2 = _make_nli(0.6)
+    with patch("semaxis.supervised.NLIModel", return_value=nli2):
+        loaded = SupervisedTransformer.load(path, llm=MagicMock())
+
+    assert loaded.features_ == t.features_
+    assert loaded.nli_model == t.nli_model
+    np.testing.assert_array_equal(loaded.classes_, t.classes_)
+    assert loaded.classes_.dtype == t.classes_.dtype
+    assert loaded.feature_meta_ == t.feature_meta_
+    texts_for_transform = ["t0", "t1"]
+    np.testing.assert_array_equal(t.transform(texts_for_transform), loaded.transform(texts_for_transform))
