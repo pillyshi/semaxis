@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "semaxis"
-version = "0.24.1"
+version = "0.24.2"
 description = "Interpretable NLI-based text features for scikit-learn"
 authors = []
 packages = [{include = "semaxis", from = "src"}]

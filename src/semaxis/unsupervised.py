@@ -88,6 +88,7 @@ class UnsupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMi
         self,
         llm: BaseLLMClient | str,
         nli_model: str = "cross-encoder/nli-deberta-v3-large",
+        nli_entailment_idx: int = 0,
         n_features: int = 20,
         context_limit: int = 100_000,
         language: str | None = None,
@@ -97,6 +98,7 @@ class UnsupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMi
     ) -> None:
         self.llm = llm
         self.nli_model = nli_model
+        self.nli_entailment_idx = nli_entailment_idx
         self.n_features = n_features
         self.context_limit = context_limit
         self.language = language
@@ -138,7 +140,7 @@ class UnsupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMi
             item["hypothesis"] for item in result.get("features", [])
         ]
 
-        self._nli = NLIModel(self.nli_model)
+        self._nli = NLIModel(self.nli_model, self.nli_entailment_idx)
         return self
 
     def transform(self, texts: Iterable[str]) -> np.ndarray:
@@ -189,5 +191,5 @@ class UnsupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMi
         obj = cls(llm=llm, **kwargs)
         obj.nli_model = data["nli_model"]
         obj.features_ = data["features"]
-        obj._nli = NLIModel(obj.nli_model)
+        obj._nli = NLIModel(obj.nli_model, obj.nli_entailment_idx)
         return obj
