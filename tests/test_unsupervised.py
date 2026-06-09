@@ -335,7 +335,7 @@ def test_nli_entailment_idx_passed_to_nli():
     MockNLI.assert_called_once_with("m", 2)
 
 
-def test_nli_entailment_idx_passed_to_nli_on_load(tmp_path):
+def test_nli_entailment_idx_survives_round_trip(tmp_path):
     t = UnsupervisedTransformer(llm=MagicMock(), nli_model="m", nli_entailment_idx=2, n_features=2)
     nli = _make_nli()
     _fit(t, _make_llm(2), nli)
@@ -343,5 +343,5 @@ def test_nli_entailment_idx_passed_to_nli_on_load(tmp_path):
 
     with patch("semaxis.unsupervised.NLIModel") as MockNLI:
         MockNLI.return_value = _make_nli()
-        UnsupervisedTransformer.load(tmp_path / "model.json", llm=MagicMock(), nli_entailment_idx=2)
+        UnsupervisedTransformer.load(tmp_path / "model.json", llm=MagicMock())
     MockNLI.assert_called_once_with("m", 2)

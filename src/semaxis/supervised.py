@@ -251,6 +251,7 @@ class SupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMixi
         with open(path, "w") as f:
             json.dump({
                 "nli_model": self.nli_model,
+                "nli_entailment_idx": self.nli_entailment_idx,
                 "classes": self.classes_.tolist(),
                 "classes_dtype": str(self.classes_.dtype),
                 "features": self.features_,
@@ -279,6 +280,7 @@ class SupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMixi
             data = json.load(f)
         obj = cls(llm=llm, **kwargs)
         obj.nli_model = data["nli_model"]
+        obj.nli_entailment_idx = data.get("nli_entailment_idx", 0)
         obj.classes_ = np.array(data["classes"], dtype=data["classes_dtype"])
         obj.features_ = data["features"]
         obj.feature_meta_ = [FeatureMeta(**m) for m in data["feature_meta"]]

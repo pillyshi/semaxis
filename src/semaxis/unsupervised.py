@@ -172,7 +172,7 @@ class UnsupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMi
         """
         check_is_fitted(self, "features_")
         with open(path, "w") as f:
-            json.dump({"nli_model": self.nli_model, "features": self.features_}, f)
+            json.dump({"nli_model": self.nli_model, "nli_entailment_idx": self.nli_entailment_idx, "features": self.features_}, f)
 
     @classmethod
     def load(cls, path: str | os.PathLike, llm: BaseLLMClient | str, **kwargs: Any) -> "UnsupervisedTransformer":
@@ -190,6 +190,7 @@ class UnsupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMi
             data = json.load(f)
         obj = cls(llm=llm, **kwargs)
         obj.nli_model = data["nli_model"]
+        obj.nli_entailment_idx = data.get("nli_entailment_idx", 0)
         obj.features_ = data["features"]
         obj._nli = NLIModel(obj.nli_model, obj.nli_entailment_idx)
         return obj
