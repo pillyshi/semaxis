@@ -215,7 +215,7 @@ def test_sklearn_clone_with_llm_client_instance():
 def test_sklearn_clone_preserves_params():
     llm = MagicMock()
     t = UnsupervisedTransformer(
-        llm=llm, nli_model="my-nli", n_features=7,
+        llm=llm, nli_model="my-nli", nli_entailment_idx=1, n_features=7,
         context_limit=50_000, language="en", seed=42,
         sample_method="kmeans", embedding_model="my-embed",
     )
@@ -300,7 +300,7 @@ def test_save_load_restores_nli_model_name(tmp_path):
     with patch("semaxis.unsupervised.NLIModel") as MockNLI:
         MockNLI.return_value = _make_nli()
         UnsupervisedTransformer.load(path, llm=MagicMock())
-    MockNLI.assert_called_once_with("custom-nli")
+    MockNLI.assert_called_once_with("custom-nli", 0)
 
 
 def test_transform_before_fit_raises_not_fitted_error():
@@ -315,3 +315,33 @@ def test_transform_empty_features_raises():
     _fit(t, _make_llm(0), nli)
     with pytest.raises(ValueError, match="No features"):
         t.transform(["text"])
+
+
+# ---------------------------------------------------------------------------
+# nli_entailment_idx parameter
+# ---------------------------------------------------------------------------
+
+def test_nli_entailment_idx_default():
+    t = UnsupervisedTransformer(llm=MagicMock(), nli_model="m")
+    assert t.nli_entailment_idx == 0
+
+
+def test_nli_entailment_idx_passed_to_nli():
+    t = UnsupervisedTransformer(llm=MagicMock(), nli_model="m", nli_entailment_idx=2, n_features=2)
+    with patch("semaxis.unsupervised.NLIModel") as MockNLI:
+        MockNLI.return_value = _make_nli()
+        t.llm = _make_llm(2)
+        t.fit(["text 1", "text 2", "text 3"])
+    MockNLI.assert_called_once_with("m", 2)
+
+
+def test_nli_entailment_idx_survives_round_trip(tmp_path):
+    t = UnsupervisedTransformer(llm=MagicMock(), nli_model="m", nli_entailment_idx=2, n_features=2)
+    nli = _make_nli()
+    _fit(t, _make_llm(2), nli)
+    t.save(tmp_path / "model.json")
+
+    with patch("semaxis.unsupervised.NLIModel") as MockNLI:
+        MockNLI.return_value = _make_nli()
+        UnsupervisedTransformer.load(tmp_path / "model.json", llm=MagicMock())
+    MockNLI.assert_called_once_with("m", 2)

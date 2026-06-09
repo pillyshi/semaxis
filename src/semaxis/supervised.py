@@ -105,6 +105,7 @@ class SupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMixi
         self,
         llm: BaseLLMClient | str,
         nli_model: str = "cross-encoder/nli-deberta-v3-large",
+        nli_entailment_idx: int = 0,
         n_features: int = 20,
         strategy: str = "ovr",
         context_limit: int = 100_000,
@@ -115,6 +116,7 @@ class SupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMixi
     ) -> None:
         self.llm = llm
         self.nli_model = nli_model
+        self.nli_entailment_idx = nli_entailment_idx
         self.n_features = n_features
         self.strategy = strategy
         self.context_limit = context_limit
@@ -216,7 +218,7 @@ class SupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMixi
                 for _ in hypotheses
             )
 
-        self._nli = NLIModel(self.nli_model)
+        self._nli = NLIModel(self.nli_model, self.nli_entailment_idx)
         return self
 
     def transform(self, texts: list[str]) -> np.ndarray:
@@ -249,6 +251,7 @@ class SupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMixi
         with open(path, "w") as f:
             json.dump({
                 "nli_model": self.nli_model,
+                "nli_entailment_idx": self.nli_entailment_idx,
                 "classes": self.classes_.tolist(),
                 "classes_dtype": str(self.classes_.dtype),
                 "features": self.features_,
@@ -277,8 +280,9 @@ class SupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMixi
             data = json.load(f)
         obj = cls(llm=llm, **kwargs)
         obj.nli_model = data["nli_model"]
+        obj.nli_entailment_idx = data.get("nli_entailment_idx", 0)
         obj.classes_ = np.array(data["classes"], dtype=data["classes_dtype"])
         obj.features_ = data["features"]
         obj.feature_meta_ = [FeatureMeta(**m) for m in data["feature_meta"]]
-        obj._nli = NLIModel(obj.nli_model)
+        obj._nli = NLIModel(obj.nli_model, obj.nli_entailment_idx)
         return obj
