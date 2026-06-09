@@ -111,7 +111,7 @@ def test_fit_accepts_numpy_array_non_random(method: str):
     llm = _make_llm(2)
     nli = _make_nli()
     texts = np.array(["foo", "bar", "baz"])
-    fake_embeddings = np.zeros((3, 4))
+    fake_embeddings = np.eye(3, 4)
     fake_model = MagicMock()
     fake_model.encode.return_value = fake_embeddings
     with patch("semaxis.unsupervised.NLIModel", return_value=nli), \
@@ -119,6 +119,7 @@ def test_fit_accepts_numpy_array_non_random(method: str):
         t.llm = llm
         t.fit(texts)
     assert t.features_ == ["hyp 0", "hyp 1"]
+    assert fake_model.encode.called
 
 
 # ---------------------------------------------------------------------------
