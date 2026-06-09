@@ -141,7 +141,7 @@ class UnsupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMi
         self._nli = NLIModel(self.nli_model)
         return self
 
-    def transform(self, texts: list[str]) -> np.ndarray:
+    def transform(self, texts: Iterable[str]) -> np.ndarray:
         """Score texts against fitted hypotheses using NLI.
 
         Args:
@@ -151,6 +151,7 @@ class UnsupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMi
             np.ndarray of shape (n_texts, n_features) with entailment scores in [0, 1].
         """
         check_is_fitted(self, "features_")
+        texts = list(texts)
         if not self.features_:
             raise ValueError(
                 "No features were generated during fit(); transform() cannot produce output."
