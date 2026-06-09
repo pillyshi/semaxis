@@ -113,6 +113,7 @@ class UnsupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMi
         Returns:
             self
         """
+        texts = list(texts)
         if self.sample_method not in _SAMPLE_METHODS:
             raise ValueError(f"sample_method must be one of {_SAMPLE_METHODS}, got {self.sample_method!r}")
 

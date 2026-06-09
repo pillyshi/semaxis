@@ -92,6 +92,18 @@ def test_fit_calls_llm_once():
     assert llm.complete_json.call_count == 1
 
 
+def test_fit_accepts_numpy_array():
+    """fit() must not raise when texts is a numpy array (sklearn pipeline input)."""
+    t = UnsupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
+    llm = _make_llm(2)
+    nli = _make_nli()
+    texts = np.array(["foo", "bar", "baz"])
+    with patch("semaxis.unsupervised.NLIModel", return_value=nli):
+        t.llm = llm
+        t.fit(texts)
+    assert t.features_ == ["hyp 0", "hyp 1"]
+
+
 # ---------------------------------------------------------------------------
 # transform
 # ---------------------------------------------------------------------------
