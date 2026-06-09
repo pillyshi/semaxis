@@ -92,6 +92,36 @@ def test_fit_calls_llm_once():
     assert llm.complete_json.call_count == 1
 
 
+def test_fit_accepts_numpy_array():
+    """fit() must not raise when texts is a numpy array (sklearn pipeline input)."""
+    t = UnsupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2)
+    llm = _make_llm(2)
+    nli = _make_nli()
+    texts = np.array(["foo", "bar", "baz"])
+    with patch("semaxis.unsupervised.NLIModel", return_value=nli):
+        t.llm = llm
+        t.fit(texts)
+    assert t.features_ == ["hyp 0", "hyp 1"]
+
+
+@pytest.mark.parametrize("method", ["kmeans", "votek"])
+def test_fit_accepts_numpy_array_non_random(method: str):
+    """Regression: numpy array input raised ValueError in _estimate_n for kmeans/votek."""
+    t = UnsupervisedTransformer(llm=MagicMock(), nli_model="m", n_features=2, sample_method=method)
+    llm = _make_llm(2)
+    nli = _make_nli()
+    texts = np.array(["foo", "bar", "baz"])
+    fake_embeddings = np.eye(3, 4)
+    fake_model = MagicMock()
+    fake_model.encode.return_value = fake_embeddings
+    with patch("semaxis.unsupervised.NLIModel", return_value=nli), \
+         patch("sentence_transformers.SentenceTransformer", return_value=fake_model):
+        t.llm = llm
+        t.fit(texts)
+    assert t.features_ == ["hyp 0", "hyp 1"]
+    assert fake_model.encode.called
+
+
 # ---------------------------------------------------------------------------
 # transform
 # ---------------------------------------------------------------------------
