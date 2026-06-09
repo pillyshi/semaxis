@@ -46,5 +46,5 @@ build-backend = "poetry.core.masonry.api"
 python_version = "3.11"
 
 [[tool.mypy.overrides]]
-module = ["sklearn.*", "sentence_transformers.*", "tqdm.*", "llama_cpp.*"]
+module = ["sklearn.*", "sentence_transformers.*", "tqdm.*", "llama_cpp.*", "scipy.*"]
 ignore_missing_imports = true

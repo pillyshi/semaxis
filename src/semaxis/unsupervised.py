@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import random
+from collections.abc import Iterable
 from typing import Any, Self
 
 from ._base import _LLMTransformerMixin
@@ -103,7 +104,7 @@ class UnsupervisedTransformer(_LLMTransformerMixin, BaseEstimator, TransformerMi
         self.sample_method = sample_method
         self.embedding_model = embedding_model
 
-    def fit(self, texts: list[str], y=None) -> Self:
+    def fit(self, texts: Iterable[str], y=None) -> Self:
         """Generate hypotheses from texts using LLM.
 
         Args:
