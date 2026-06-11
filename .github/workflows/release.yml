@@ -18,7 +18,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - run: uv run pytest
+      - run: uv run --group dev pytest
 
   build-and-publish:
     needs: [test]
@@ -29,7 +29,9 @@ jobs:
 
     steps:
       - name: Validate tag format
-        run: echo "${{ github.ref_name }}" | grep -Px 'v\d+\.\d+\.\d+$'
+        env:
+          TAG: ${{ github.ref_name }}
+        run: echo "$TAG" | grep -Px '^v\d+\.\d+\.\d+$'
 
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
