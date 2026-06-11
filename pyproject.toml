@@ -6,7 +6,7 @@ authors = []
 packages = [{include = "semaxis", from = "src"}]
 
 [tool.poetry.dependencies]
-python = ">=3.11"
+python = ">=3.12"
 openai = ">=1.30"
 tiktoken = ">=0.7"
 sentence-transformers = ">=3.0"
