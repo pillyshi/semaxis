@@ -35,6 +35,14 @@ jobs:
 
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
+      - name: Verify version matches tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          PKG_VERSION=$(grep -m1 '^version' pyproject.toml | grep -Po '"\K[^"]+')
+          TAG_VERSION="${TAG#v}"
+          [ "$PKG_VERSION" = "$TAG_VERSION" ] || { echo "Tag $TAG does not match pyproject.toml version $PKG_VERSION"; exit 1; }
+
       - uses: astral-sh/setup-uv@22695119d769bdb6f7032ad67b9bca0ef8c4a174  # v5.4.0
         with:
           python-version: "3.12"
