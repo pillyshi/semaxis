@@ -39,7 +39,7 @@ jobs:
         env:
           TAG: ${{ github.ref_name }}
         run: |
-          PKG_VERSION=$(grep -m1 '^version' pyproject.toml | grep -Po '"\K[^"]+')
+          PKG_VERSION=$(grep -m1 '^version\s*=' pyproject.toml | grep -Po '"\K[^"]+')
           TAG_VERSION="${TAG#v}"
           [ "$PKG_VERSION" = "$TAG_VERSION" ] || { echo "Tag $TAG does not match pyproject.toml version $PKG_VERSION"; exit 1; }
 

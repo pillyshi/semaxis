@@ -2,6 +2,7 @@
 name = "semaxis"
 version = "0.24.2"
 description = "Interpretable NLI-based text features for scikit-learn"
+readme = "README.md"
 authors = []
 requires-python = ">=3.12"
 dependencies = [
@@ -28,6 +29,8 @@ packages = ["src/semaxis"]
 include = [
     "/src",
     "/tests",
+    "/LICENSE",
+    "/README.md",
     "/pyproject.toml",
 ]
 
