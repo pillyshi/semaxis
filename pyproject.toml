@@ -3,6 +3,7 @@ name = "semaxis"
 version = "0.24.2"
 description = "Interpretable NLI-based text features for scikit-learn"
 readme = "README.md"
+license = {file = "LICENSE"}
 authors = []
 requires-python = ">=3.12"
 dependencies = [
